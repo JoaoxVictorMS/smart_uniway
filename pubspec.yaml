@@ -1,0 +1,65 @@
+name: smart_uniway
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.9.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  cupertino_icons: ^1.0.8
+  font_awesome_flutter: ^10.7.0
+  fl_chart: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    # Se você adicionou a pasta de fontes, ela deve estar aqui também
+    # - fonts/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: fonts/Poppins-Regular.ttf
+        - asset: fonts/Poppins-Bold.ttf
+          weight: 700
+
+# ----------------------------------------------------
+# Seção da Splash Screen - Corrigida e Elaborada
+# ----------------------------------------------------
+flutter_native_splash:
+  # Cor de fundo padrão (modo claro).
+  color: "#1A1A2E"
+  # Imagem padrão (modo claro).
+  image: assets/images/smart_uniway_logo.png
+  
+  # Cor de fundo para o Modo Escuro.
+  color_dark: "#1A1A2E"
+  # Imagem para o Modo Escuro (pode ser a mesma ou uma versão otimizada).
+  image_dark: assets/images/smart_uniway_logo.png
+  
+  # Adiciona um branding na parte inferior (opcional).
+  # branding: assets/images/branding.png
+
+  # Garante que a splash screen ocupe a tela inteira.
+  fullscreen: true
+
+  # Configurações específicas para Android 12+ para garantir consistência.
+  android_12:
+    color: "#1A1A2E"
+    image: assets/images/smart_uniway_logo.png
+    color_dark: "#1A1A2E"
+    image_dark: assets/images/smart_uniway_logo.png

@@ -1,0 +1,7 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "cmake.sourceDirectory": "C:/Workspace/College/Projeto Integrador II/SmartUniway/smart_uniway/linux",
+    "totvsLanguageServer.welcomePage": false,
+    "files.autoSave": "afterDelay",
+    "dart.flutterHotReloadOnSave": "all",
+}
