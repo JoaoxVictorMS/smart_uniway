@@ -1,13 +1,15 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:smart_uniway/models/user_model.dart'; // Precisa importar o modelo de usuário
+import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/screens/login_screen.dart';
 import 'package:smart_uniway/screens/registration_screen.dart';
 import 'package:smart_uniway/screens/welcome_screen.dart';
 import 'package:smart_uniway/screens/student_home_screen.dart';
 import 'package:smart_uniway/screens/admin_home_screen.dart';
-import 'package:smart_uniway/screens/profile_screen.dart'; // Precisa importar a nova tela de perfil
+import 'package:smart_uniway/screens/profile_screen.dart';
+import 'package:smart_uniway/screens/student_list_screen.dart';
+import 'package:smart_uniway/screens/attendance_screen.dart';
 
 void main() {
   runApp(const SmartUniwayApp());
@@ -55,6 +57,10 @@ class SmartUniwayApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const StudentHomeScreen());
           case '/admin_home':
             return MaterialPageRoute(builder: (_) => const AdminHomeScreen());
+          case '/student_list':
+            return MaterialPageRoute(builder: (_) => const StudentListScreen());
+          case '/attendance':
+            return MaterialPageRoute(builder: (_) => const AttendanceScreen());
 
           // Rota especial para o perfil, que verifica o argumento
           case '/profile':
@@ -65,8 +71,7 @@ class SmartUniwayApp extends StatelessWidget {
                 builder: (_) => ProfileScreen(user: user),
               );
             }
-            // Se não for, pode retornar uma tela de erro ou null
-            return null;
+            return null; // Rota não encontrada se o argumento for inválido
 
           default:
             // Rota não encontrada

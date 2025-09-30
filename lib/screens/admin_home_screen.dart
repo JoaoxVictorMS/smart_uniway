@@ -201,7 +201,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Fecha o menu primeiro
+                    Navigator.pushNamed(context, '/student_list');
                   },
                 ),
                 ListTile(
@@ -217,7 +218,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Fecha o menu primeiro
+                    Navigator.pushNamed(context, '/attendance');
                   },
                 ),
                 ListTile(
