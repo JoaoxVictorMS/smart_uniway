@@ -309,7 +309,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             style: const TextStyle(
               fontFamily: 'Poppins',
               color: Colors.white,
