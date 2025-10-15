@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/database_service.dart'; // Importa o serviço
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -19,7 +20,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   static const Color subtleLightColor = Color(0xFF4A4A58);
   static const Color darkAccentColor = Color(0xFF16213E);
 
+  // Future para buscar os dados do gráfico
+  late Future<Map<String, int>> _chartDataFuture;
   int touchedIndex = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicia a busca pelos dados assim que a tela é criada
+    _chartDataFuture = DatabaseService.instance.getStudentCountByInstitution();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,38 +68,77 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 ),
                 const SizedBox(height: 48),
                 Expanded(
-                  child: PieChart(
-                    PieChartData(
-                      pieTouchData: PieTouchData(
-                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                          setState(() {
-                            if (!event.isInterestedForInteractions ||
-                                pieTouchResponse == null ||
-                                pieTouchResponse.touchedSection == null) {
-                              touchedIndex = -1;
-                              return;
-                            }
-                            touchedIndex = pieTouchResponse
-                                .touchedSection!
-                                .touchedSectionIndex;
-                          });
-                        },
-                      ),
-                      borderData: FlBorderData(show: false),
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 60,
-                      sections: _buildChartSections(),
-                    ),
+                  // --- ALTERAÇÃO PRINCIPAL AQUI ---
+                  child: FutureBuilder<Map<String, int>>(
+                    future: _chartDataFuture,
+                    builder: (context, snapshot) {
+                      // Enquanto carrega
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: primaryAccentColor,
+                          ),
+                        );
+                      }
+                      // Se deu erro
+                      if (snapshot.hasError) {
+                        return const Center(
+                          child: Text(
+                            'Erro ao carregar dados',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
+                      // Se não há dados ou o mapa está vazio
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'Nenhum aluno cadastrado para exibir no gráfico.',
+                            style: TextStyle(color: Colors.white70),
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+
+                      // Se os dados chegaram
+                      final chartData = snapshot.data!;
+                      return Column(
+                        children: [
+                          Expanded(
+                            child: PieChart(
+                              PieChartData(
+                                pieTouchData: PieTouchData(
+                                  touchCallback:
+                                      (FlTouchEvent event, pieTouchResponse) {
+                                        setState(() {
+                                          if (!event
+                                                  .isInterestedForInteractions ||
+                                              pieTouchResponse == null ||
+                                              pieTouchResponse.touchedSection ==
+                                                  null) {
+                                            touchedIndex = -1;
+                                            return;
+                                          }
+                                          touchedIndex = pieTouchResponse
+                                              .touchedSection!
+                                              .touchedSectionIndex;
+                                        });
+                                      },
+                                ),
+                                borderData: FlBorderData(show: false),
+                                sectionsSpace: 2,
+                                centerSpaceRadius: 60,
+                                sections: _buildChartSections(chartData),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Legendas agora são geradas dinamicamente
+                          _buildDynamicIndicators(chartData),
+                        ],
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildIndicator('IFSP', darkAccentColor),
-                    const SizedBox(width: 16),
-                    _buildIndicator('FATEC', subtleLightColor),
-                  ],
                 ),
                 const SizedBox(height: 48),
               ],
@@ -100,34 +149,57 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  List<PieChartSectionData> _buildChartSections() {
-    final isTouchedIFSP = touchedIndex == 0;
-    final isTouchedFATEC = touchedIndex == 1;
-    final fontSize = isTouchedIFSP || isTouchedFATEC ? 20.0 : 16.0;
-    final radius = isTouchedIFSP || isTouchedFATEC ? 110.0 : 100.0;
-    final titleStyle = TextStyle(
-      fontSize: fontSize,
-      fontWeight: FontWeight.bold,
-      color: const Color(0xffffffff),
-      shadows: [const Shadow(color: Colors.black, blurRadius: 2)],
-    );
+  // Função ATUALIZADA para receber os dados reais
+  List<PieChartSectionData> _buildChartSections(Map<String, int> data) {
+    final colorMap = {'IFSP': darkAccentColor, 'FATEC': subtleLightColor};
+    final totalStudents = data.values.fold(0, (sum, count) => sum + count);
+    if (totalStudents == 0) return [];
 
-    return [
-      PieChartSectionData(
-        color: darkAccentColor,
-        value: 65,
-        title: '65%',
-        radius: isTouchedIFSP ? radius : 100.0,
-        titleStyle: titleStyle,
-      ),
-      PieChartSectionData(
-        color: subtleLightColor,
-        value: 35,
-        title: '35%',
-        radius: isTouchedFATEC ? radius : 100.0,
-        titleStyle: titleStyle,
-      ),
-    ];
+    List<PieChartSectionData> sections = [];
+    int index = 0;
+    data.forEach((institution, count) {
+      final isTouched = touchedIndex == index;
+      final fontSize = isTouched ? 20.0 : 16.0;
+      final radius = isTouched ? 110.0 : 100.0;
+      final percentage = (count / totalStudents) * 100;
+
+      sections.add(
+        PieChartSectionData(
+          color: colorMap[institution] ?? Colors.grey,
+          value: percentage,
+          title: '${percentage.toStringAsFixed(0)}%',
+          radius: radius,
+          titleStyle: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: [const Shadow(color: Colors.black, blurRadius: 2)],
+          ),
+        ),
+      );
+      index++;
+    });
+    return sections;
+  }
+
+  // NOVA Função para gerar legendas dinamicamente
+  Widget _buildDynamicIndicators(Map<String, int> data) {
+    final colorMap = {'IFSP': darkAccentColor, 'FATEC': subtleLightColor};
+    List<Widget> indicators = [];
+    data.forEach((institution, count) {
+      indicators.add(
+        _buildIndicator(institution, colorMap[institution] ?? Colors.grey),
+      );
+      indicators.add(const SizedBox(width: 16));
+    });
+    // Remove o último SizedBox
+    if (indicators.isNotEmpty) {
+      indicators.removeLast();
+    }
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: indicators,
+    );
   }
 
   Widget _buildIndicator(String text, Color color) {
@@ -201,7 +273,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context); // Fecha o menu primeiro
+                    Navigator.pop(context);
                     Navigator.pushNamed(context, '/student_list');
                   },
                 ),
@@ -218,24 +290,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context); // Fecha o menu primeiro
-                    Navigator.pushNamed(context, '/attendance');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.bar_chart_outlined,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Gerar Relatório',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  onTap: () {
                     Navigator.pop(context);
+                    Navigator.pushNamed(context, '/attendance');
                   },
                 ),
                 const Divider(color: Colors.white30, indent: 16, endIndent: 16),
@@ -252,12 +308,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    // LÓGICA DE NAVEGAÇÃO PARA O PERFIL
                     final mockAdmin = User(
                       name: 'Admin',
                       surname: 'Master',
                       email: 'admin@smartuniway.com',
                       phone: '(17) 00000-0000',
+                      password: 'admin',
                       userType: UserType.admin,
                     );
                     Navigator.pushNamed(
@@ -279,7 +335,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   onTap: () {
-                    // LÓGICA DE LOGOUT
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/',
                       (Route<dynamic> route) => false,

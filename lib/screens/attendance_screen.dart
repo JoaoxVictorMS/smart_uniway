@@ -2,9 +2,10 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/database_service.dart';
 
-// Enum para controlar os estados de presença
 enum AttendanceStatus { present, absent, unmarked }
 
 class AttendanceScreen extends StatefulWidget {
@@ -15,63 +16,96 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  // Paleta de Cores
   static const Color primaryAccentColor = Color(0xFFE9B44C);
   static const Color darkAccentColor = Color(0xFF16213E);
   static const Color presentColor = Colors.green;
   static const Color absentColor = Colors.red;
 
-  // Dados Mock
-  final List<User> _allStudents = _getMockStudents();
   List<User> _studentsForSelectedInstitution = [];
-
-  // Mapa para controlar o status de cada aluno
   final Map<String, AttendanceStatus> _attendanceStatus = {};
-
   String? _selectedInstitution;
+  bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Inicializa o status de todos os alunos como "unmarked"
-    for (var student in _allStudents) {
-      _attendanceStatus[student.registrationNumber!] =
-          AttendanceStatus.unmarked;
+  // CORRECTED HERE: The variable was missing
+  final bool _isGeneratingReport = false;
+
+  final String _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  Future<void> _onInstitutionSelected(String? institution) async {
+    if (institution == null) return;
+    setState(() {
+      _isLoading = true;
+      _selectedInstitution = institution;
+      _studentsForSelectedInstitution = [];
+    });
+
+    final studentsFuture = DatabaseService.instance.getStudentsByInstitution(
+      institution,
+    );
+    final attendanceFuture = DatabaseService.instance.getAttendanceForDate(
+      _today,
+    );
+
+    final results = await Future.wait([studentsFuture, attendanceFuture]);
+    final students = results[0] as List<User>;
+    final todaysAttendance = results[1] as Map<int, String>;
+
+    if (mounted) {
+      setState(() {
+        _studentsForSelectedInstitution = students;
+        _attendanceStatus.clear();
+        for (var student in students) {
+          if (student.registrationNumber != null && student.id != null) {
+            final savedStatus = todaysAttendance[student.id];
+            if (savedStatus == 'present') {
+              _attendanceStatus[student.registrationNumber!] =
+                  AttendanceStatus.present;
+            } else if (savedStatus == 'absent') {
+              _attendanceStatus[student.registrationNumber!] =
+                  AttendanceStatus.absent;
+            } else {
+              _attendanceStatus[student.registrationNumber!] =
+                  AttendanceStatus.unmarked;
+            }
+          }
+        }
+        _isLoading = false;
+      });
     }
   }
 
-  void _onInstitutionSelected(String? institution) {
+  void _markAttendance(User student, AttendanceStatus status) {
+    if (student.registrationNumber == null || student.id == null) return;
+
+    String studentRegNumber = student.registrationNumber!;
+    AttendanceStatus newStatus;
+
+    if (_attendanceStatus[studentRegNumber] == status) {
+      newStatus = AttendanceStatus.unmarked;
+    } else {
+      newStatus = status;
+    }
+
     setState(() {
-      _selectedInstitution = institution;
-      if (institution != null) {
-        _studentsForSelectedInstitution = _allStudents
-            .where((s) => s.institution == institution)
-            .toList();
-      } else {
-        _studentsForSelectedInstitution = [];
-      }
-      // Reseta o status da chamada ao trocar de instituição
-      _attendanceStatus.updateAll((key, value) => AttendanceStatus.unmarked);
+      _attendanceStatus[studentRegNumber] = newStatus;
     });
+
+    DatabaseService.instance.saveAttendanceRecord(
+      student.id!,
+      _today,
+      newStatus.toString().split('.').last,
+    );
   }
 
-  void _markAttendance(String studentId, AttendanceStatus status) {
-    setState(() {
-      // Alterna o status se o mesmo botão for clicado novamente
-      if (_attendanceStatus[studentId] == status) {
-        _attendanceStatus[studentId] = AttendanceStatus.unmarked;
-      } else {
-        _attendanceStatus[studentId] = status;
-      }
-    });
+  void _handleReportButton() {
+    if (_selectedInstitution != null) {
+      Navigator.pushNamed(context, '/report', arguments: _selectedInstitution);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Filtra os status apenas para os alunos da instituição selecionada
-    final relevantStatuses = _studentsForSelectedInstitution.map(
-      (s) => _attendanceStatus[s.registrationNumber!],
-    );
+    final relevantStatuses = _attendanceStatus.values;
     int presentCount = relevantStatuses
         .where((s) => s == AttendanceStatus.present)
         .length;
@@ -96,7 +130,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       body: Stack(
         children: [
-          // Textura de fundo
           Positioned.fill(
             child: Opacity(
               opacity: 0.04,
@@ -106,7 +139,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
             ),
           ),
-          // Conteúdo principal
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -114,7 +146,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 const SizedBox(height: 16),
                 _buildInstitutionSelector(),
                 const SizedBox(height: 24),
-
                 if (_selectedInstitution != null) ...[
                   _buildSummaryBar(
                     presentCount,
@@ -123,17 +154,43 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                   const SizedBox(height: 24),
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: _studentsForSelectedInstitution.length,
-                      separatorBuilder: (context, index) =>
-                          Divider(color: Colors.white.withAlpha(51)),
-                      itemBuilder: (context, index) {
-                        final student = _studentsForSelectedInstitution[index];
-                        final status =
-                            _attendanceStatus[student.registrationNumber!] ??
-                            AttendanceStatus.unmarked;
-                        return _buildAttendanceListItem(student, status);
-                      },
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: primaryAccentColor,
+                            ),
+                          )
+                        : _studentsForSelectedInstitution.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Nenhum aluno encontrado para esta instituição.',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: _studentsForSelectedInstitution.length,
+                            separatorBuilder: (context, index) =>
+                                Divider(color: Colors.white.withAlpha(51)),
+                            itemBuilder: (context, index) {
+                              final student =
+                                  _studentsForSelectedInstitution[index];
+                              final status =
+                                  _attendanceStatus[student
+                                      .registrationNumber!] ??
+                                  AttendanceStatus.unmarked;
+                              return _buildAttendanceListItem(student, status);
+                            },
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: _buildGlassButton(
+                      onPressed: _handleReportButton,
+                      text: 'Ver Relatório Completo',
+                      isPrimary: true,
                     ),
                   ),
                 ] else
@@ -154,12 +211,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // --- FUNÇÕES HELPER ---
+  // --- HELPER FUNCTIONS ---
 
   Widget _buildInstitutionSelector() {
     return _buildDropdownField(
       hintText: 'Selecione a Instituição',
-      items: ['IFSP', 'FATEC'], // Opções de instituições
+      items: ['IFSP', 'FATEC'],
       value: _selectedInstitution,
       onChanged: (value) => _onInstitutionSelected(value),
     );
@@ -221,7 +278,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         borderColor = Colors.transparent;
         break;
     }
-
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -246,7 +302,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ),
         subtitle: Text(
-          'Rota: ${student.route}', // Agora mostramos a rota como info secundária
+          'Rota: ${student.route}',
           style: TextStyle(color: Colors.white.withAlpha(179)),
         ),
         trailing: Row(
@@ -259,10 +315,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   status == AttendanceStatus.present ? 1.0 : 0.4,
                 ),
               ),
-              onPressed: () => _markAttendance(
-                student.registrationNumber!,
-                AttendanceStatus.present,
-              ),
+              onPressed: () =>
+                  _markAttendance(student, AttendanceStatus.present),
             ),
             IconButton(
               icon: Icon(
@@ -271,10 +325,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   status == AttendanceStatus.absent ? 1.0 : 0.4,
                 ),
               ),
-              onPressed: () => _markAttendance(
-                student.registrationNumber!,
-                AttendanceStatus.absent,
-              ),
+              onPressed: () =>
+                  _markAttendance(student, AttendanceStatus.absent),
             ),
           ],
         ),
@@ -282,7 +334,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // ESTA FUNÇÃO FOI ATUALIZADA PARA ESTILIZAR O MENU
   Widget _buildDropdownField({
     required String hintText,
     required List<String> items,
@@ -342,13 +393,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 fontSize: 14,
               ),
             ),
-            dropdownColor: darkAccentColor.withAlpha(
-              240,
-            ), // Cor de fundo do menu
+            dropdownColor: darkAccentColor.withAlpha(240),
             icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-            items: items.map((String val) {
-              return DropdownMenuItem<String>(value: val, child: Text(val));
-            }).toList(),
+            items: items
+                .map(
+                  (String val) =>
+                      DropdownMenuItem<String>(value: val, child: Text(val)),
+                )
+                .toList(),
             onChanged: onChanged,
           ),
         ),
@@ -356,78 +408,53 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  static List<User> _getMockStudents() {
-    return [
-      User(
-        name: 'João Victor',
-        surname: 'Santos',
-        email: 'joao@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '1',
-        registrationNumber: 'SP001',
+  Widget _buildGlassButton({
+    required VoidCallback? onPressed,
+    required String text,
+    bool isPrimary = false,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isPrimary
+                ? primaryAccentColor.withAlpha(200)
+                : Colors.white.withAlpha(26),
+            foregroundColor: isPrimary ? Colors.black : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isPrimary
+                    ? primaryAccentColor
+                    : Colors.white.withAlpha(51),
+                width: 1.5,
+              ),
+            ),
+            elevation: 0,
+          ),
+          onPressed: onPressed,
+          child: _isLoading && isPrimary
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.black,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+        ),
       ),
-      User(
-        name: 'Gustavo',
-        surname: 'Mendes',
-        email: 'gustavo@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '2',
-        registrationNumber: 'SP002',
-      ),
-      User(
-        name: 'Felipe',
-        surname: 'Fernandes',
-        email: 'felipe@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '1',
-        registrationNumber: 'SP003',
-      ),
-      User(
-        name: 'Ana Carolina',
-        surname: 'Souza',
-        email: 'ana@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '3',
-        registrationNumber: 'SP004',
-      ),
-      User(
-        name: 'Lucas',
-        surname: 'Pereira',
-        email: 'lucas@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '2',
-        registrationNumber: 'SP005',
-      ),
-      User(
-        name: 'Mariana',
-        surname: 'Lima',
-        email: 'mariana@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '1',
-        registrationNumber: 'SP006',
-      ),
-      User(
-        name: 'Felipe',
-        surname: 'Edua',
-        email: 'hello@email.com',
-        phone: '12345',
-        userType: UserType.student,
-        institution: 'IFFP',
-        route: '2',
-        registrationNumber: 'SP007',
-      ),
-    ];
+    );
   }
 }

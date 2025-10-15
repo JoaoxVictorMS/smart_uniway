@@ -1,25 +1,28 @@
-// lib/screens/student_home_screen.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/auth_provider.dart'; // Importa o AuthProvider
 
 class StudentHomeScreen extends StatelessWidget {
   const StudentHomeScreen({super.key});
 
-  // Paleta de Cores herdada do tema
   static const Color backgroundColor = Color(0xFF1A1A2E);
   static const Color primaryAccentColor = Color(0xFFE9B44C);
 
   @override
   Widget build(BuildContext context) {
+    // --- ALTERAÇÃO PRINCIPAL AQUI ---
+    // Busca os dados do usuário logado através do AuthProvider
+    final user = AuthProvider.of(context)?.user;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white, size: 28),
       ),
-      drawer: _buildAppDrawer(context),
+      // Passa os dados do usuário para o Drawer
+      drawer: _buildAppDrawer(context, user),
       body: Stack(
         children: [
           Positioned.fill(
@@ -31,10 +34,11 @@ class StudentHomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Center(
+          Center(
+            // Exibe o nome real do usuário
             child: Text(
-              'Bem vindo, estudante.',
-              style: TextStyle(
+              'Bem vindo, ${user?.name ?? 'estudante'}.',
+              style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 22,
                 color: Colors.white,
@@ -46,7 +50,7 @@ class StudentHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppDrawer(BuildContext context) {
+  Widget _buildAppDrawer(BuildContext context, User? user) {
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         topRight: Radius.circular(20),
@@ -60,26 +64,35 @@ class StudentHomeScreen extends StatelessWidget {
             color: backgroundColor.withAlpha(200),
             child: Column(
               children: [
-                UserAccountsDrawerHeader(
-                  accountName: const Text(
-                    'João Victor Santos',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                if (user != null) // Só mostra o cabeçalho se o usuário existir
+                  UserAccountsDrawerHeader(
+                    accountName: Text(
+                      '${user.name} ${user.surname}', // Usa o nome real
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    accountEmail: Text(
+                      user.email,
+                      style: const TextStyle(fontFamily: 'Poppins'),
+                    ), // Usa o email real
+                    currentAccountPicture: CircleAvatar(
+                      backgroundColor: primaryAccentColor,
+                      child: Text(
+                        '${user.name[0]}${user.surname[0]}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(15),
                     ),
                   ),
-                  accountEmail: const Text(
-                    'joao.santos@email.com',
-                    style: TextStyle(fontFamily: 'Poppins'),
-                  ),
-                  currentAccountPicture: const CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/150?u=joao',
-                    ),
-                  ),
-                  decoration: BoxDecoration(color: Colors.white.withAlpha(15)),
-                ),
                 ListTile(
                   leading: const Icon(
                     Icons.person_outline,
@@ -93,24 +106,10 @@ class StudentHomeScreen extends StatelessWidget {
                     ),
                   ),
                   onTap: () {
-                    // LÓGICA DE NAVEGAÇÃO PARA O PERFIL
-                    final mockStudent = User(
-                      name: 'João Victor',
-                      surname: 'Santos',
-                      email: 'joao.santos@email.com',
-                      phone: '(17) 99999-9999',
-                      userType: UserType.student,
-                      institution: 'IFSP',
-                      course: 'Análise e Desenv. de Sistemas',
-                      registrationNumber: 'SP123456',
-                      route: 'Rota 1',
-                      period: 'Noturno',
-                    );
-                    Navigator.pushNamed(
-                      context,
-                      '/profile',
-                      arguments: mockStudent,
-                    );
+                    if (user != null) {
+                      Navigator.pop(context); // Fecha o menu
+                      Navigator.pushNamed(context, '/profile', arguments: user);
+                    }
                   },
                 ),
                 const Spacer(),
@@ -125,7 +124,6 @@ class StudentHomeScreen extends StatelessWidget {
                     ),
                   ),
                   onTap: () {
-                    // LÓGICA DE LOGOUT
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/',
                       (Route<dynamic> route) => false,

@@ -2,10 +2,11 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:smart_uniway/models/user_model.dart'; // Importa nosso modelo
+import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/database_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final User user; // A tela recebe um objeto User para saber quem exibir
+  final User user;
 
   const ProfileScreen({super.key, required this.user});
 
@@ -14,9 +15,100 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Paleta de Cores
-  static const Color backgroundColor = Color(0xFF1A1A2E);
   static const Color primaryAccentColor = Color(0xFFE9B44C);
+
+  final _formKey = GlobalKey<FormState>();
+  bool _isEditing = false;
+  bool _isLoading = false;
+
+  late TextEditingController _nameController;
+  late TextEditingController _surnameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _courseController;
+  late TextEditingController _registrationController;
+  late TextEditingController _institutionController;
+  late TextEditingController _periodController;
+  late TextEditingController _routeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeControllers();
+  }
+
+  void _initializeControllers() {
+    _nameController = TextEditingController(text: widget.user.name);
+    _surnameController = TextEditingController(text: widget.user.surname);
+    _phoneController = TextEditingController(text: widget.user.phone);
+    _courseController = TextEditingController(text: widget.user.course);
+    _registrationController = TextEditingController(
+      text: widget.user.registrationNumber,
+    );
+    _institutionController = TextEditingController(
+      text: widget.user.institution,
+    );
+    _periodController = TextEditingController(text: widget.user.period);
+    _routeController = TextEditingController(text: widget.user.route);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _surnameController.dispose();
+    _phoneController.dispose();
+    _courseController.dispose();
+    _registrationController.dispose();
+    _institutionController.dispose();
+    _periodController.dispose();
+    _routeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSaveChanges() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+      final updatedUser = User(
+        id: widget.user.id,
+        email: widget.user.email,
+        password: widget.user.password,
+        userType: widget.user.userType,
+        name: _nameController.text.trim(),
+        surname: _surnameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        course: _courseController.text.trim(),
+        registrationNumber: _registrationController.text.trim(),
+        institution: _institutionController.text.trim(),
+        period: _periodController.text.trim(),
+        route: _routeController.text.trim(),
+      );
+      try {
+        await DatabaseService.instance.updateUser(updatedUser);
+        _showFeedbackSnackBar('Perfil atualizado com sucesso!');
+        setState(() {
+          _isEditing = false;
+        });
+      } catch (e) {
+        _showFeedbackSnackBar('Erro ao atualizar o perfil.', isError: true);
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _showFeedbackSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +125,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              icon: Icon(
+                _isEditing ? Icons.close : Icons.edit_outlined,
+                size: 26,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isEditing = !_isEditing;
+                  if (!_isEditing) {
+                    _initializeControllers();
+                  }
+                });
+              },
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
-          // Textura de fundo
           Positioned.fill(
             child: Opacity(
               opacity: 0.04,
@@ -46,108 +156,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
-          // Conteúdo
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: primaryAccentColor,
-                      // Lógica para mostrar foto ou ícone
-                      child: widget.user.userType == UserType.admin
-                          ? const Icon(
-                              Icons.admin_panel_settings,
-                              size: 50,
-                              color: Colors.black,
-                            )
-                          : Text(
-                              '${widget.user.name[0]}${widget.user.surname[0]}',
-                              style: const TextStyle(
-                                fontSize: 40,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: primaryAccentColor,
+                        child: widget.user.userType == UserType.admin
+                            ? const Icon(
+                                Icons.admin_panel_settings,
+                                size: 50,
                                 color: Colors.black,
-                                fontWeight: FontWeight.bold,
+                              )
+                            : Text(
+                                '${widget.user.name[0]}${widget.user.surname[0]}',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      '${widget.user.name} ${widget.user.surname}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
                       ),
                     ),
-                  ),
-                  Center(
-                    child: Text(
-                      widget.user.email,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withAlpha(179),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        '${_nameController.text} ${_surnameController.text}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Divider(color: Colors.white24),
-                  const SizedBox(height: 16),
-
-                  // Campos de texto com os dados do usuário
-                  _buildProfileInfoField(
-                    label: 'Nome',
-                    value: widget.user.name,
-                  ),
-                  _buildProfileInfoField(
-                    label: 'Sobrenome',
-                    value: widget.user.surname,
-                  ),
-                  _buildProfileInfoField(
-                    label: 'Telefone',
-                    value: widget.user.phone,
-                  ),
-
-                  // --- LÓGICA CONDICIONAL ---
-                  // Mostra campos extras apenas se o usuário for um estudante
-                  if (widget.user.userType == UserType.student) ...[
+                    Center(
+                      child: Text(
+                        widget.user.email,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withAlpha(179),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
                     const Divider(color: Colors.white24),
                     const SizedBox(height: 16),
-                    _buildProfileInfoField(
-                      label: 'Instituição',
-                      value: widget.user.institution ?? 'N/A',
+                    _buildProfileField(
+                      controller: _nameController,
+                      label: 'Nome',
                     ),
-                    _buildProfileInfoField(
-                      label: 'Curso',
-                      value: widget.user.course ?? 'N/A',
+                    _buildProfileField(
+                      controller: _surnameController,
+                      label: 'Sobrenome',
                     ),
-                    _buildProfileInfoField(
-                      label: 'Matrícula',
-                      value: widget.user.registrationNumber ?? 'N/A',
+                    _buildProfileField(
+                      controller: _phoneController,
+                      label: 'Telefone',
                     ),
-                    _buildProfileInfoField(
-                      label: 'Rota',
-                      value: widget.user.route ?? 'N/A',
-                    ),
-                    _buildProfileInfoField(
-                      label: 'Período',
-                      value: widget.user.period ?? 'N/A',
-                    ),
+                    if (widget.user.userType == UserType.student) ...[
+                      const Divider(color: Colors.white24),
+                      const SizedBox(height: 16),
+                      _buildProfileField(
+                        controller: _institutionController,
+                        label: 'Instituição',
+                      ),
+                      _buildProfileField(
+                        controller: _courseController,
+                        label: 'Curso',
+                      ),
+                      _buildProfileField(
+                        controller: _registrationController,
+                        label: 'Matrícula',
+                      ),
+                      _buildProfileField(
+                        controller: _routeController,
+                        label: 'Rota',
+                      ),
+                      _buildProfileField(
+                        controller: _periodController,
+                        label: 'Período',
+                      ),
+                    ],
+                    const SizedBox(height: 40),
+                    if (_isEditing)
+                      _buildGlassButton(
+                        onPressed: _isLoading ? null : _handleSaveChanges,
+                        text: 'Salvar Alterações',
+                        isPrimary: true,
+                      ),
                   ],
-
-                  const SizedBox(height: 40),
-                  _buildGlassButton(
-                    onPressed: () {
-                      /* TODO: Lógica para salvar */
-                    },
-                    text: 'Salvar Alterações',
-                    isPrimary: true,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -156,14 +260,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- FUNÇÕES HELPER ---
-
-  Widget _buildProfileInfoField({
+  Widget _buildProfileField({
+    required TextEditingController controller,
     required String label,
-    required String value,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -176,18 +278,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(color: Colors.white, fontSize: 16),
-          ),
+          _isEditing
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                    child: TextFormField(
+                      controller: controller,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Campo não pode ser vazio'
+                          : null,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.white.withAlpha(26),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.white.withAlpha(51),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.white.withAlpha(51),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: primaryAccentColor,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : Text(
+                  controller.text,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
         ],
       ),
     );
   }
 
-  // Copie esta função da sua welcome_screen para cá
   Widget _buildGlassButton({
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required String text,
     bool isPrimary = false,
   }) {
@@ -198,17 +340,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: isPrimary
-                ? const Color.fromARGB(255, 157, 132, 183).withAlpha(200)
+                ? primaryAccentColor.withAlpha(200)
                 : Colors.white.withAlpha(26),
-            foregroundColor: isPrimary
-                ? const Color.fromARGB(255, 255, 255, 255)
-                : Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            foregroundColor: isPrimary ? Colors.black : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
                 color: isPrimary
-                    ? const Color.fromARGB(255, 157, 132, 183)
+                    ? primaryAccentColor
                     : Colors.white.withAlpha(51),
                 width: 1.5,
               ),
@@ -216,14 +356,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             elevation: 0,
           ),
           onPressed: onPressed,
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: _isLoading && isPrimary
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.black,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
     );

@@ -3,6 +3,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/database_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -13,15 +15,29 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen>
     with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _surnameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _courseController = TextEditingController();
+  final _registrationController = TextEditingController();
+  final _institutionController = TextEditingController();
+  final _periodController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  String? _selectedCity;
+  String? _selectedRoute;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+  bool _agreedToTerms = false;
+  bool _isLoading = false;
+
   late AnimationController _auroraController;
   late Animation<Offset> _animationBlob1;
   late Animation<Offset> _animationBlob2;
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
-  bool _agreedToTerms = false;
-
-  // Paleta de Cores Corporativa
   static const Color backgroundColor = Color(0xFF1A1A2E);
   static const Color primaryAccentColor = Color(0xFFE9B44C);
   static const Color subtleLightColor = Color(0xFF4A4A58);
@@ -52,18 +68,86 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   @override
   void dispose() {
     _auroraController.dispose();
+    _nameController.dispose();
+    _surnameController.dispose();
+    _phoneController.dispose();
+    _courseController.dispose();
+    _registrationController.dispose();
+    _institutionController.dispose();
+    _periodController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleCreateAccount() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      if (!_agreedToTerms) {
+        _showFeedbackSnackBar(
+          'Você precisa aceitar os Termos de Uso.',
+          isError: true,
+        );
+        return;
+      }
+      setState(() {
+        _isLoading = true;
+      });
+      final newUser = User(
+        name: _nameController.text.trim(),
+        surname: _surnameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        userType: UserType.student,
+        course: _courseController.text.trim(),
+        registrationNumber: _registrationController.text.trim(),
+        institution: _institutionController.text.trim(),
+        period: _periodController.text.trim(),
+        route: _selectedRoute,
+      );
+      try {
+        await DatabaseService.instance.createUser(newUser);
+        _showFeedbackSnackBar('Conta criada com sucesso!');
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        _showFeedbackSnackBar(
+          'Erro ao criar conta. O email já pode estar em uso.',
+          isError: true,
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  void _showFeedbackSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          // FUNDO ANIMADO
           SlideTransition(
             position: _animationBlob1,
             child: _buildAuroraBlob(
@@ -84,119 +168,147 @@ class _RegistrationScreenState extends State<RegistrationScreen>
               ),
             ),
           ),
-
-          // CONTEÚDO DO REGISTRO
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
                 vertical: 24.0,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // CABEÇALHO CORRIGIDO
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildSocialButton(),
-                        const SizedBox(height: 24),
-                        _buildDivider(),
-                        const SizedBox(height: 24),
-
-                        Row(
-                          children: [
-                            Expanded(child: _buildTextField(hintText: 'Nome')),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildTextField(hintText: 'Sobrenome'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTextField(hintText: 'Telefone'),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildDropdownField(
-                                hintText: 'Cidade',
-                                items: ['Catanduva', 'Pindorama', 'Palmares'],
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildSocialButton(),
+                          const SizedBox(height: 24),
+                          _buildDivider(),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _nameController,
+                                  hintText: 'Nome',
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _buildTextField(hintText: 'Curso')),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildTextField(hintText: 'Matrícula'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTextField(hintText: 'Instituição'),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildDropdownField(
-                                hintText: 'Rota',
-                                items: ['Rota 1', 'Rota 2', 'Rota 3'],
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _surnameController,
+                                  hintText: 'Sobrenome',
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Período'),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Email'),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          hintText: 'Senha',
-                          isPassword: true,
-                          isConfirm: false,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          hintText: 'Confirme sua Senha',
-                          isPassword: true,
-                          isConfirm: true,
-                        ),
-
-                        const SizedBox(height: 24),
-                        _buildPasswordRequirements(),
-                        const SizedBox(height: 16),
-                        _buildTermsAndConditions(),
-                        const SizedBox(height: 32),
-
-                        _buildGlassButton(
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(
-                              context,
-                              '/admin_home',
-                            );
-                          },
-                          text: 'Criar Conta',
-                          isPrimary: true,
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _phoneController,
+                                  hintText: 'Telefone',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDropdownField(
+                                  hintText: 'Cidade',
+                                  items: ['Catanduva', 'Pindorama', 'Palmares'],
+                                  value: _selectedCity,
+                                  onChanged: (value) {
+                                    setState(() => _selectedCity = value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _courseController,
+                                  hintText: 'Curso',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _registrationController,
+                                  hintText: 'Matrícula',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTextField(
+                                  controller: _institutionController,
+                                  hintText: 'Instituição',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildDropdownField(
+                                  hintText: 'Rota',
+                                  items: ['Rota 1', 'Rota 2', 'Rota 3'],
+                                  value: _selectedRoute,
+                                  onChanged: (value) {
+                                    setState(() => _selectedRoute = value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _periodController,
+                            hintText: 'Período',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _emailController,
+                            hintText: 'Email',
+                            isEmail: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _passwordController,
+                            hintText: 'Senha',
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _confirmPasswordController,
+                            hintText: 'Confirme sua Senha',
+                            isPassword: true,
+                            isConfirm: true,
+                          ),
+                          const SizedBox(height: 24),
+                          _buildPasswordRequirements(),
+                          const SizedBox(height: 16),
+                          _buildTermsAndConditions(),
+                          const SizedBox(height: 32),
+                          _buildGlassButton(
+                            onPressed: _isLoading ? null : _handleCreateAccount,
+                            text: 'Criar Conta',
+                            isPrimary: true,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -206,6 +318,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   }
 
   // --- FUNÇÕES HELPER ---
+
+  // COLE TODAS ESTAS FUNÇÕES NO FINAL DO SEU ARQUIVO, DENTRO DO _RegistrationScreenState
 
   Widget _buildHeader() {
     return Row(
@@ -227,19 +341,40 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   }
 
   Widget _buildTextField({
+    required TextEditingController controller,
     required String hintText,
     bool isPassword = false,
     bool isConfirm = false,
+    bool isEmail = false,
   }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
         child: TextFormField(
+          controller: controller,
           obscureText: isPassword
               ? (isConfirm ? !_isConfirmPasswordVisible : !_isPasswordVisible)
               : false,
           style: _getTextStyle(fontSize: 14),
+          keyboardType: isEmail
+              ? TextInputType.emailAddress
+              : TextInputType.text,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Campo obrigatório';
+            }
+            if (isEmail && !RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
+              return 'Por favor, insira um email válido';
+            }
+            if (isPassword && value.length < 8) {
+              return 'A senha deve ter no mínimo 8 caracteres';
+            }
+            if (isConfirm && value != _passwordController.text) {
+              return 'As senhas não coincidem';
+            }
+            return null;
+          },
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: _getTextStyle(alpha: 150, fontSize: 14),
@@ -282,6 +417,14 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                 width: 1.5,
               ),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
           ),
         ),
       ),
@@ -291,6 +434,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   Widget _buildDropdownField({
     required String hintText,
     required List<String> items,
+    String? value,
+    required ValueChanged<String?> onChanged,
   }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -298,6 +443,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
         child: DropdownButtonFormField<String>(
           style: _getTextStyle(fontSize: 14),
+          validator: (value) => value == null ? 'Campo obrigatório' : null,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white.withAlpha(26),
@@ -316,14 +462,25 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                 width: 1.5,
               ),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
           ),
           hint: Text(hintText, style: _getTextStyle(alpha: 150, fontSize: 14)),
           dropdownColor: darkAccentColor,
           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-          items: items.map((String value) {
-            return DropdownMenuItem<String>(value: value, child: Text(value));
-          }).toList(),
-          onChanged: (_) {},
+          items: items
+              .map(
+                (String value) =>
+                    DropdownMenuItem<String>(value: value, child: Text(value)),
+              )
+              .toList(),
+          onChanged: onChanged,
         ),
       ),
     );
@@ -361,13 +518,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       children: [
         Checkbox(
           value: _agreedToTerms,
-          onChanged: (bool? value) {
-            setState(() {
-              _agreedToTerms = value!;
-            });
-          },
+          onChanged: (bool? value) => setState(() => _agreedToTerms = value!),
           checkColor: backgroundColor,
-          activeColor: const Color.fromARGB(255, 255, 255, 255),
+          activeColor: primaryAccentColor,
           side: BorderSide(color: Colors.white.withAlpha(179)),
         ),
         Expanded(
@@ -380,7 +533,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                   text: 'Termos de Uso',
                   style: _getTextStyle(
                     fontSize: 12,
-                    color: const Color.fromARGB(255, 255, 255, 255),
+                    color: primaryAccentColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -389,7 +542,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                   text: 'Política de Privacidade',
                   style: _getTextStyle(
                     fontSize: 12,
-                    color: const Color.fromARGB(255, 255, 255, 255),
+                    color: primaryAccentColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -475,7 +628,7 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   }
 
   Widget _buildGlassButton({
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     required String text,
     bool isPrimary = false,
   }) {
@@ -486,17 +639,15 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: isPrimary
-                ? const Color.fromARGB(255, 157, 132, 183).withAlpha(200)
+                ? primaryAccentColor.withAlpha(200)
                 : Colors.white.withAlpha(26),
-            foregroundColor: isPrimary
-                ? const Color.fromARGB(255, 255, 255, 255)
-                : Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            foregroundColor: isPrimary ? Colors.black : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
                 color: isPrimary
-                    ? const Color.fromARGB(255, 157, 132, 183)
+                    ? primaryAccentColor
                     : Colors.white.withAlpha(51),
                 width: 1.5,
               ),
@@ -504,14 +655,20 @@ class _RegistrationScreenState extends State<RegistrationScreen>
             elevation: 0,
           ),
           onPressed: onPressed,
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: _isLoading && isPrimary
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(color: Colors.black),
+                )
+              : Text(
+                  text,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
     );

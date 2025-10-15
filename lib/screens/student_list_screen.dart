@@ -3,6 +3,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/services/database_service.dart';
 
 class StudentListScreen extends StatefulWidget {
   const StudentListScreen({super.key});
@@ -17,26 +18,28 @@ class _StudentListScreenState extends State<StudentListScreen> {
   static const Color subtleLightColor = Color(0xFF4A4A58);
   static const Color darkAccentColor = Color(0xFF16213E);
 
-  // Lista original de todos os alunos (dados mock)
-  late List<User> _allStudents;
-  // Lista que será exibida e filtrada pela busca
+  late Future<List<User>> _studentsFuture;
+  List<User> _allStudents = [];
   List<User> _filteredStudents = [];
 
   final TextEditingController _searchController = TextEditingController();
-
-  // Variáveis de estado para os filtros
   String? _selectedInstitution;
   String? _selectedRoute;
 
   @override
   void initState() {
     super.initState();
-    _allStudents = _getMockStudents();
-    _filteredStudents = _allStudents;
+    _studentsFuture = _loadStudents();
+    _searchController.addListener(_filterStudents);
+  }
 
-    _searchController.addListener(() {
-      _filterStudents();
+  Future<List<User>> _loadStudents() async {
+    final students = await DatabaseService.instance.getAllStudents();
+    setState(() {
+      _allStudents = students;
+      _filteredStudents = students;
     });
+    return students;
   }
 
   @override
@@ -51,12 +54,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
       _filteredStudents = _allStudents.where((student) {
         final fullName =
             '${student.name.toLowerCase()} ${student.surname.toLowerCase()}';
-        // Lógica de filtro combinada (busca E filtros de chip)
         final institutionMatch =
             _selectedInstitution == null ||
             student.institution == _selectedInstitution;
         final routeMatch =
-            _selectedRoute == null || 'Rota ${student.route}' == _selectedRoute;
+            _selectedRoute == null ||
+            student.route == _selectedRoute?.replaceAll('Rota ', '');
 
         return fullName.contains(query) && institutionMatch && routeMatch;
       }).toList();
@@ -81,7 +84,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
       ),
       body: Stack(
         children: [
-          // Textura de fundo
           Positioned.fill(
             child: Opacity(
               opacity: 0.04,
@@ -91,7 +93,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
           ),
-          // Conteúdo principal
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -102,24 +103,38 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 _buildFilterChips(),
                 const SizedBox(height: 24),
                 Expanded(
-                  child: _filteredStudents.isEmpty
-                      ? Center(
+                  child: FutureBuilder<List<User>>(
+                    future: _studentsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: primaryAccentColor,
+                          ),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
                           child: Text(
-                            'Nenhum aluno encontrado.',
+                            'Erro ao carregar alunos: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'Nenhum aluno cadastrado.',
                             style: TextStyle(
-                              color: Colors.white.withAlpha(150),
-                              fontFamily: 'Poppins',
+                              color: Colors.white70,
                               fontSize: 16,
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: _filteredStudents.length,
-                          itemBuilder: (context, index) {
-                            final student = _filteredStudents[index];
-                            return _buildStudentListItem(student);
-                          },
-                        ),
+                        );
+                      }
+                      return _buildStudentListView();
+                    },
+                  ),
                 ),
               ],
             ),
@@ -129,7 +144,32 @@ class _StudentListScreenState extends State<StudentListScreen> {
     );
   }
 
-  // --- FUNÇÕES HELPER ---
+  Widget _buildStudentListView() {
+    if (_filteredStudents.isEmpty) {
+      return Center(
+        child: Text(
+          _searchController.text.isNotEmpty ||
+                  _selectedInstitution != null ||
+                  _selectedRoute != null
+              ? 'Nenhum aluno encontrado com os filtros aplicados.'
+              : 'Nenhum aluno cadastrado.',
+          style: TextStyle(
+            color: Colors.white.withAlpha(150),
+            fontFamily: 'Poppins',
+            fontSize: 16,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+    return ListView.builder(
+      itemCount: _filteredStudents.length,
+      itemBuilder: (context, index) {
+        final student = _filteredStudents[index];
+        return _buildStudentListItem(student);
+      },
+    );
+  }
 
   Widget _buildFilterChips() {
     return SizedBox(
@@ -145,12 +185,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
             onSelected: (value) {
               setState(() {
                 _selectedInstitution = value;
-                _filterStudents();
               });
+              _filterStudents();
             },
           ),
           const SizedBox(width: 12),
-
           _buildFilterPopupMenu(
             hint: 'Rota',
             icon: Icons.alt_route_outlined,
@@ -159,11 +198,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
             onSelected: (value) {
               setState(() {
                 _selectedRoute = value;
-                _filterStudents();
               });
+              _filterStudents();
             },
           ),
-
           if (_selectedInstitution != null || _selectedRoute != null)
             Padding(
               padding: const EdgeInsets.only(left: 12.0),
@@ -172,8 +210,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   setState(() {
                     _selectedInstitution = null;
                     _selectedRoute = null;
-                    _filterStudents();
                   });
+                  _filterStudents();
                 },
                 child: _buildChip(
                   label: 'Limpar',
@@ -187,24 +225,21 @@ class _StudentListScreenState extends State<StudentListScreen> {
     );
   }
 
-  // ESTA FUNÇÃO FOI ATUALIZADA PARA ESTILIZAR O MENU
   Widget _buildFilterPopupMenu({
     required String hint,
     required IconData icon,
-    required String? selectedValue,
+    String? selectedValue,
     required Set<String> items,
     required ValueChanged<String> onSelected,
   }) {
-    // Envolvemos o botão em um widget Theme para customizar o menu
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
-          color: darkAccentColor.withAlpha(220), // Cor de fundo do menu
+          color: darkAccentColor.withAlpha(220),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: Colors.white.withAlpha(51)),
           ),
-          elevation: 4,
           textStyle: const TextStyle(
             color: Colors.white,
             fontFamily: 'Poppins',
@@ -214,11 +249,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
       ),
       child: PopupMenuButton<String>(
         onSelected: onSelected,
-        itemBuilder: (BuildContext context) {
-          return items.map((String choice) {
-            return PopupMenuItem<String>(value: choice, child: Text(choice));
-          }).toList();
-        },
+        itemBuilder: (BuildContext context) => items
+            .map(
+              (String choice) =>
+                  PopupMenuItem<String>(value: choice, child: Text(choice)),
+            )
+            .toList(),
         child: _buildChip(
           label: selectedValue ?? hint,
           icon: icon,
@@ -353,70 +389,13 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 ),
               ),
               trailing: const Icon(Icons.chevron_right, color: Colors.white),
-              onTap: () {},
+              onTap: () {
+                Navigator.pushNamed(context, '/profile', arguments: student);
+              },
             ),
           ),
         ),
       ),
     );
-  }
-
-  List<User> _getMockStudents() {
-    return [
-      User(
-        name: 'João Victor',
-        surname: 'Santos',
-        email: 'joao@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '1',
-      ),
-      User(
-        name: 'Gustavo',
-        surname: 'Mendes',
-        email: 'gustavo@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '2',
-      ),
-      User(
-        name: 'Felipe',
-        surname: 'Fernandes',
-        email: 'felipe@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '1',
-      ),
-      User(
-        name: 'Ana Carolina',
-        surname: 'Souza',
-        email: 'ana@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '3',
-      ),
-      User(
-        name: 'Lucas',
-        surname: 'Pereira',
-        email: 'lucas@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'IFSP',
-        route: '2',
-      ),
-      User(
-        name: 'Mariana',
-        surname: 'Lima',
-        email: 'mariana@email.com',
-        phone: '123',
-        userType: UserType.student,
-        institution: 'FATEC',
-        route: '1',
-      ),
-    ];
   }
 }
