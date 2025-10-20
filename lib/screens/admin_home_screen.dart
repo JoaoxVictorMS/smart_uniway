@@ -311,7 +311,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     final mockAdmin = User(
                       name: 'Admin',
                       surname: 'Master',
-                      email: 'admin@smartuniway.com',
+                      email: 'admin@smartuniway.com.br.smart',
                       phone: '(17) 00000-0000',
                       password: 'admin',
                       userType: UserType.admin,
