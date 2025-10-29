@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<Offset> _animationBlob1;
   late Animation<Offset> _animationBlob2;
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color subtleLightColor = Color(0xFF4A4A58);
   static const Color darkAccentColor = Color(0xFF16213E);
 

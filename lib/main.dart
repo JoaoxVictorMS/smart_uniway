@@ -21,7 +21,7 @@ class SmartUniwayApp extends StatelessWidget {
   const SmartUniwayApp({super.key});
 
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color(0xFF1A1A2E);
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class SmartUniwayApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryAccentColor,
           brightness: Brightness.dark,
-          surface: backgroundColor, // CORRIGIDO: de 'background' para 'surface'
+          surface: const Color(0xFF1A1A2E), // CORRIGIDO: de 'background' para 'surface'
         ),
         useMaterial3: true,
       ),
