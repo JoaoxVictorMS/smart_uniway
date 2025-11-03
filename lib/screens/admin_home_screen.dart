@@ -4,7 +4,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:smart_uniway/models/user_model.dart';
-import 'package:smart_uniway/services/database_service.dart'; // Importa o serviço
+import 'package:smart_uniway/services/auth_provider.dart';
+import 'package:smart_uniway/services/database_service.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -14,93 +15,100 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
-  // Paleta de Cores
   static const Color backgroundColor = Color(0xFF1A1A2E);
   static const Color primaryAccentColor = Color(0xFFE9B44C);
-  static const Color subtleLightColor = Color(0xFF4A4A58);
-  static const Color darkAccentColor = Color(0xFF16213E);
 
-  // Future para buscar os dados do gráfico
+  // --- NOVAS CORES DO GRÁFICO ---
+  static const Color ifspColor = Color(0xFFD94E4E);
+  static const Color cetecColor = Color(0xFF4ECFD9);
+  static const Color fatecColor = Color(0xFF4ED964);
+  static const Color unifipaColor = Color(0xFFD9D34E);
+  static const Color etecColor = Color(0xFFD97F4E);
+  static const Color imesColor = Color(0xFF8A4ED9);
+  static const Color otherColor = Color(0xFF9E9E9E);
+
   late Future<Map<String, int>> _chartDataFuture;
   int touchedIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    // Inicia a busca pelos dados assim que a tela é criada
     _chartDataFuture = DatabaseService.instance.getStudentCountByInstitution();
   }
 
+  // --- MAPA DE CORES ATUALIZADO ---
+  Map<String, Color> get institutionColorMap => {
+    'IFSP': ifspColor,
+    'CETEC': cetecColor,
+    'FATEC': fatecColor,
+    'UNIFIPA': unifipaColor,
+    'ETEC': etecColor,
+    'IMES': imesColor,
+  };
+
   @override
   Widget build(BuildContext context) {
+    final user = AuthProvider.of(context)?.user;
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white, size: 28),
-      ),
-      drawer: _buildAppDrawer(context),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      drawer: _buildAppDrawer(context, user),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.04,
-              child: Image.asset(
-                'assets/images/noise_texture.png',
-                repeat: ImageRepeat.repeat,
+          if (isDark)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.04,
+                child: Image.asset(
+                  'assets/images/noise_texture.png',
+                  repeat: ImageRepeat.repeat,
+                ),
               ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-                const Text(
-                  'Olá, Administrador',
+                Text(
+                  'Olá, ${user?.name ?? 'Administrador'}!',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: themeColors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 48),
                 Expanded(
-                  // --- ALTERAÇÃO PRINCIPAL AQUI ---
                   child: FutureBuilder<Map<String, int>>(
                     future: _chartDataFuture,
                     builder: (context, snapshot) {
-                      // Enquanto carrega
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
+                        return Center(
                           child: CircularProgressIndicator(
-                            color: primaryAccentColor,
+                            color: themeColors.primary,
                           ),
                         );
                       }
-                      // Se deu erro
-                      if (snapshot.hasError) {
-                        return const Center(
+                      if (snapshot.hasError ||
+                          !snapshot.hasData ||
+                          snapshot.data!.isEmpty) {
+                        return Center(
                           child: Text(
-                            'Erro ao carregar dados',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        );
-                      }
-                      // Se não há dados ou o mapa está vazio
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'Nenhum aluno cadastrado para exibir no gráfico.',
-                            style: TextStyle(color: Colors.white70),
+                            'Nenhum aluno cadastrado.',
+                            style: TextStyle(
+                              color: themeColors.onSurface.withOpacity(0.7),
+                              fontSize: 16,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         );
                       }
 
-                      // Se os dados chegaram
                       final chartData = snapshot.data!;
                       return Column(
                         children: [
@@ -133,7 +141,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          // Legendas agora são geradas dinamicamente
                           _buildDynamicIndicators(chartData),
                         ],
                       );
@@ -149,12 +156,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  // Função ATUALIZADA para receber os dados reais
+  // --- FUNÇÃO ATUALIZADA ---
   List<PieChartSectionData> _buildChartSections(Map<String, int> data) {
-    final colorMap = {'IFSP': darkAccentColor, 'FATEC': subtleLightColor};
     final totalStudents = data.values.fold(0, (sum, count) => sum + count);
     if (totalStudents == 0) return [];
-
     List<PieChartSectionData> sections = [];
     int index = 0;
     data.forEach((institution, count) {
@@ -162,10 +167,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       final fontSize = isTouched ? 20.0 : 16.0;
       final radius = isTouched ? 110.0 : 100.0;
       final percentage = (count / totalStudents) * 100;
-
       sections.add(
         PieChartSectionData(
-          color: colorMap[institution] ?? Colors.grey,
+          color:
+              institutionColorMap[institution] ??
+              otherColor, // Usa o mapa de cores
           value: percentage,
           title: '${percentage.toStringAsFixed(0)}%',
           radius: radius,
@@ -182,28 +188,35 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return sections;
   }
 
-  // NOVA Função para gerar legendas dinamicamente
+  // --- FUNÇÃO ATUALIZADA ---
   Widget _buildDynamicIndicators(Map<String, int> data) {
-    final colorMap = {'IFSP': darkAccentColor, 'FATEC': subtleLightColor};
+    final themeColors = Theme.of(context).colorScheme;
     List<Widget> indicators = [];
     data.forEach((institution, count) {
       indicators.add(
-        _buildIndicator(institution, colorMap[institution] ?? Colors.grey),
+        _buildIndicator(
+          institution,
+          institutionColorMap[institution] ?? otherColor,
+          themeColors.onSurface,
+        ),
       );
       indicators.add(const SizedBox(width: 16));
     });
-    // Remove o último SizedBox
     if (indicators.isNotEmpty) {
       indicators.removeLast();
     }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    // Usa Wrap para quebrar a linha se não houver espaço
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16.0,
+      runSpacing: 8.0,
       children: indicators,
     );
   }
 
-  Widget _buildIndicator(String text, Color color) {
+  Widget _buildIndicator(String text, Color color, Color textColor) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
           width: 16,
@@ -213,17 +226,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: textColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAppDrawer(BuildContext context) {
+  Widget _buildAppDrawer(BuildContext context, User? user) {
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         topRight: Radius.circular(20),
@@ -233,117 +248,126 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
         child: Drawer(
           width: MediaQuery.of(context).size.width * 0.75,
-          child: Container(
-            color: backgroundColor.withAlpha(200),
-            child: Column(
-              children: [
+          backgroundColor: isDark
+              ? backgroundColor.withAlpha(200)
+              : themeColors.surface.withAlpha(240),
+          child: Column(
+            children: [
+              if (user != null)
                 UserAccountsDrawerHeader(
-                  accountName: const Text(
-                    'Admin',
+                  accountName: Text(
+                    '${user.name} ${user.surname}',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      color: themeColors.onSurface,
                     ),
                   ),
-                  accountEmail: const Text(
-                    'admin@smartuniway.com',
-                    style: TextStyle(fontFamily: 'Poppins'),
-                  ),
-                  currentAccountPicture: const CircleAvatar(
-                    backgroundColor: primaryAccentColor,
-                    child: Icon(
-                      Icons.admin_panel_settings,
-                      color: Colors.black,
-                      size: 36,
-                    ),
-                  ),
-                  decoration: BoxDecoration(color: Colors.white.withAlpha(15)),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.people_outline,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Lista de Alunos',
+                  accountEmail: Text(
+                    user.email,
                     style: TextStyle(
-                      color: Colors.white,
                       fontFamily: 'Poppins',
+                      color: themeColors.onSurface.withOpacity(0.7),
                     ),
                   ),
-                  onTap: () {
+                  currentAccountPicture: CircleAvatar(
+                    backgroundColor: themeColors.primary,
+                    child: Text(
+                      '${user.name[0]}${user.surname[0]}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  decoration: BoxDecoration(
+                    color: themeColors.onSurface.withAlpha(15),
+                  ),
+                ),
+              ListTile(
+                leading: Icon(
+                  Icons.people_outline,
+                  color: themeColors.onSurface,
+                ),
+                title: Text(
+                  'Lista de Alunos',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/student_list');
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.fact_check_outlined,
+                  color: themeColors.onSurface,
+                ),
+                title: Text(
+                  'Fazer Chamada',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/attendance');
+                },
+              ),
+              Divider(
+                color: themeColors.onSurface.withOpacity(0.2),
+                indent: 16,
+                endIndent: 16,
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.person_outline,
+                  color: themeColors.onSurface,
+                ),
+                title: Text(
+                  'Meu Perfil',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                onTap: () {
+                  if (user != null) {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/student_list');
-                  },
+                    Navigator.pushNamed(context, '/profile', arguments: user);
+                  }
+                },
+              ),
+              const Spacer(),
+              Divider(
+                color: themeColors.onSurface.withOpacity(0.2),
+                indent: 16,
+                endIndent: 16,
+              ),
+              ListTile(
+                leading: Icon(Icons.logout, color: themeColors.onSurface),
+                title: Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.fact_check_outlined,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Fazer Chamada',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/attendance');
-                  },
-                ),
-                const Divider(color: Colors.white30, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(
-                    Icons.person_outline,
-                    color: Colors.white,
-                  ),
-                  title: const Text(
-                    'Meu Perfil',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  onTap: () {
-                    final mockAdmin = User(
-                      name: 'Admin',
-                      surname: 'Master',
-                      email: 'admin@smartuniway.com.br.smart',
-                      phone: '(17) 00000-0000',
-                      password: 'admin',
-                      userType: UserType.admin,
-                    );
-                    Navigator.pushNamed(
-                      context,
-                      '/profile',
-                      arguments: mockAdmin,
-                    );
-                  },
-                ),
-                const Spacer(),
-                const Divider(color: Colors.white30, indent: 16, endIndent: 16),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.white),
-                  title: const Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/',
-                      (Route<dynamic> route) => false,
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+                onTap: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/',
+                    (Route<dynamic> route) => false,
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

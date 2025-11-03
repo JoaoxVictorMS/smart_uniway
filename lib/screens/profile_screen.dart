@@ -2,8 +2,10 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/database_service.dart';
+import 'package:smart_uniway/services/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final User user;
@@ -15,8 +17,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
-
   final _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isLoading = false;
@@ -102,6 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showFeedbackSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
@@ -112,17 +113,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = themeProvider.themeMode == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Meu Perfil',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Meu Perfil'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+          icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -147,15 +149,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.04,
-              child: Image.asset(
-                'assets/images/noise_texture.png',
-                repeat: ImageRepeat.repeat,
+          if (isDark)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.04,
+                child: Image.asset(
+                  'assets/images/noise_texture.png',
+                  repeat: ImageRepeat.repeat,
+                ),
               ),
             ),
-          ),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -167,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Center(
                       child: CircleAvatar(
                         radius: 50,
-                        backgroundColor: primaryAccentColor,
+                        backgroundColor: themeColors.primary,
                         child: widget.user.userType == UserType.admin
                             ? const Icon(
                                 Icons.admin_panel_settings,
@@ -188,10 +191,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Center(
                       child: Text(
                         '${_nameController.text} ${_surnameController.text}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: themeColors.onSurface,
                         ),
                       ),
                     ),
@@ -200,13 +203,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         widget.user.email,
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withAlpha(179),
+                          color: themeColors.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Divider(color: Colors.white24),
+
+                    const Divider(),
+                    _buildThemeToggle(themeProvider, themeColors),
+                    const Divider(),
                     const SizedBox(height: 16),
+
                     _buildProfileField(
                       controller: _nameController,
                       label: 'Nome',
@@ -219,8 +226,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: _phoneController,
                       label: 'Telefone',
                     ),
+
                     if (widget.user.userType == UserType.student) ...[
-                      const Divider(color: Colors.white24),
+                      const Divider(),
                       const SizedBox(height: 16),
                       _buildProfileField(
                         controller: _institutionController,
@@ -260,10 +268,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // --- FUNÇÃO CORRIGIDA ---
+  Widget _buildThemeToggle(ThemeProvider themeProvider, ColorScheme colors) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        themeProvider.themeMode == ThemeMode.dark
+            ? Icons.dark_mode_outlined
+            : Icons.light_mode_outlined,
+        color: colors.primary,
+        size: 28,
+      ),
+      title: Text(
+        'Modo Escuro',
+        style: TextStyle(
+          fontFamily: 'Poppins',
+          fontWeight: FontWeight.w600,
+          color: colors.onSurface,
+        ),
+      ),
+      subtitle: Text(
+        themeProvider.themeMode == ThemeMode.dark ? 'Ativado' : 'Desativado',
+        style: TextStyle(
+          fontFamily: 'Poppins',
+          color: colors.onSurface.withOpacity(0.7),
+        ),
+      ),
+      trailing: Switch(
+        value: themeProvider.themeMode == ThemeMode.dark,
+        onChanged: (bool value) {
+          themeProvider.toggleTheme();
+        },
+        // CORRIGIDO: Usa a cor do tema
+        activeColor: colors.primary,
+      ),
+    );
+  }
+
   Widget _buildProfileField({
     required TextEditingController controller,
     required String label,
   }) {
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -272,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              color: Colors.white.withAlpha(150),
+              color: themeColors.onSurface.withOpacity(0.6),
               fontSize: 12,
               letterSpacing: 1.5,
             ),
@@ -282,11 +330,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                    filter: ImageFilter.blur(
+                      sigmaX: isDark ? 5.0 : 0.0,
+                      sigmaY: isDark ? 5.0 : 0.0,
+                    ),
                     child: TextFormField(
                       controller: controller,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeColors.onSurface,
                         fontSize: 16,
                         fontFamily: 'Poppins',
                       ),
@@ -295,23 +346,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           : null,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Colors.white.withAlpha(26),
+                        fillColor: isDark
+                            ? Colors.white.withAlpha(26)
+                            : Colors.black.withAlpha(10),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Colors.white.withAlpha(51),
+                            color: isDark
+                                ? Colors.white.withAlpha(51)
+                                : Colors.black.withAlpha(20),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Colors.white.withAlpha(51),
+                            color: isDark
+                                ? Colors.white.withAlpha(51)
+                                : Colors.black.withAlpha(20),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: primaryAccentColor,
+                          borderSide: BorderSide(
+                            color: themeColors.primary,
                             width: 1.5,
                           ),
                         ),
@@ -320,36 +377,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 )
               : Text(
-                  controller.text,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  controller.text.isNotEmpty ? controller.text : 'N/A',
+                  style: TextStyle(color: themeColors.onSurface, fontSize: 16),
                 ),
         ],
       ),
     );
   }
 
+  // --- FUNÇÃO CORRIGIDA ---
   Widget _buildGlassButton({
     required VoidCallback? onPressed,
     required String text,
     bool isPrimary = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColors = Theme.of(context).colorScheme;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        filter: ImageFilter.blur(
+          sigmaX: isDark ? 10.0 : 0.0,
+          sigmaY: isDark ? 10.0 : 0.0,
+        ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
+            // CORRIGIDO: Usa a cor do tema
             backgroundColor: isPrimary
-                ? primaryAccentColor.withAlpha(200)
-                : Colors.white.withAlpha(26),
-            foregroundColor: isPrimary ? Colors.black : Colors.white,
+                ? themeColors.primary.withAlpha(200)
+                : (isDark
+                      ? Colors.white.withAlpha(26)
+                      : Colors.black.withAlpha(5)),
+            foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+              // CORRIGIDO: Usa a cor do tema
               side: BorderSide(
                 color: isPrimary
-                    ? primaryAccentColor
-                    : Colors.white.withAlpha(51),
+                    ? themeColors.primary
+                    : (isDark
+                          ? Colors.white.withAlpha(51)
+                          : Colors.black.withAlpha(20)),
                 width: 1.5,
               ),
             ),

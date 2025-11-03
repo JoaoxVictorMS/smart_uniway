@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/database_service.dart';
+import 'package:smart_uniway/services/report_service.dart'; // Importa o serviço de relatório
 
 enum AttendanceStatus { present, absent, unmarked }
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
-
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
 }
@@ -25,11 +25,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final Map<String, AttendanceStatus> _attendanceStatus = {};
   String? _selectedInstitution;
   bool _isLoading = false;
-
-  // CORRECTED HERE: The variable was missing
-  final bool _isGeneratingReport = false;
-
+  bool _isGeneratingReport = false;
   final String _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  final List<String> institutions = [
+    'IFSP',
+    'CETEC',
+    'FATEC',
+    'UNIFIPA',
+    'ETEC',
+    'IMES',
+  ];
 
   Future<void> _onInstitutionSelected(String? institution) async {
     if (institution == null) return;
@@ -76,20 +81,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   void _markAttendance(User student, AttendanceStatus status) {
     if (student.registrationNumber == null || student.id == null) return;
-
     String studentRegNumber = student.registrationNumber!;
     AttendanceStatus newStatus;
-
     if (_attendanceStatus[studentRegNumber] == status) {
       newStatus = AttendanceStatus.unmarked;
     } else {
       newStatus = status;
     }
-
     setState(() {
       _attendanceStatus[studentRegNumber] = newStatus;
     });
-
     DatabaseService.instance.saveAttendanceRecord(
       student.id!,
       _today,
@@ -97,10 +98,49 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  void _handleReportButton() {
-    if (_selectedInstitution != null) {
-      Navigator.pushNamed(context, '/report', arguments: _selectedInstitution);
+  // --- FUNÇÃO ATUALIZADA ---
+  Future<void> _handleGlobalReportButton() async {
+    setState(() {
+      _isGeneratingReport = true;
+    });
+    try {
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(const Duration(days: 30));
+
+      final reportData = await DatabaseService.instance
+          .getGlobalAttendanceReport(startDate, endDate);
+
+      if (reportData.isEmpty && mounted) {
+        _showFeedbackSnackBar(
+          'Não há dados de chamada para gerar o relatório.',
+          isError: true,
+        );
+        setState(() {
+          _isGeneratingReport = false;
+        });
+        return;
+      }
+
+      await ReportService.generateGlobalAttendancePdf(reportData);
+    } catch (e) {
+      _showFeedbackSnackBar('Erro ao gerar o relatório.', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingReport = false;
+        });
+      }
     }
+  }
+
+  void _showFeedbackSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -113,32 +153,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         .where((s) => s == AttendanceStatus.absent)
         .length;
     int totalInInstitution = _studentsForSelectedInstitution.length;
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Fazer Chamada',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Fazer Chamada'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+          icon: const Icon(Icons.arrow_back, size: 28),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.04,
-              child: Image.asset(
-                'assets/images/noise_texture.png',
-                repeat: ImageRepeat.repeat,
+          if (isDark)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.04,
+                child: Image.asset(
+                  'assets/images/noise_texture.png',
+                  repeat: ImageRepeat.repeat,
+                ),
               ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -146,34 +186,69 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 const SizedBox(height: 16),
                 _buildInstitutionSelector(),
                 const SizedBox(height: 24),
-                if (_selectedInstitution != null) ...[
+
+                // Botão para o relatório visual (de instituição única)
+                if (_selectedInstitution != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: _buildGlassButton(
+                      onPressed: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/report',
+                          arguments: _selectedInstitution,
+                        );
+                      },
+                      text: 'Ver Gráfico da Instituição',
+                      isPrimary: false,
+                    ),
+                  ),
+
+                // Botão para Relatório Global em PDF
+                _buildGlassButton(
+                  onPressed: _isGeneratingReport
+                      ? null
+                      : _handleGlobalReportButton,
+                  text: 'Gerar PDF Global (30 dias)',
+                  isPrimary: true,
+                ),
+
+                const SizedBox(height: 24),
+
+                // Painel de resumo da chamada atual
+                if (_selectedInstitution != null)
                   _buildSummaryBar(
                     presentCount,
                     absentCount,
                     totalInInstitution,
                   ),
-                  const SizedBox(height: 24),
+
+                if (_selectedInstitution != null) const SizedBox(height: 24),
+
+                // Lista de alunos
+                if (_selectedInstitution != null)
                   Expanded(
                     child: _isLoading
-                        ? const Center(
+                        ? Center(
                             child: CircularProgressIndicator(
-                              color: primaryAccentColor,
+                              color: themeColors.primary,
                             ),
                           )
                         : _studentsForSelectedInstitution.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text(
-                              'Nenhum aluno encontrado para esta instituição.',
+                              'Nenhum aluno encontrado.',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: themeColors.onSurface.withOpacity(0.7),
                                 fontSize: 16,
                               ),
                             ),
                           )
                         : ListView.separated(
                             itemCount: _studentsForSelectedInstitution.length,
-                            separatorBuilder: (context, index) =>
-                                Divider(color: Colors.white.withAlpha(51)),
+                            separatorBuilder: (context, index) => Divider(
+                              color: themeColors.onSurface.withOpacity(0.2),
+                            ),
                             itemBuilder: (context, index) {
                               final student =
                                   _studentsForSelectedInstitution[index];
@@ -185,20 +260,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                             },
                           ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: _buildGlassButton(
-                      onPressed: _handleReportButton,
-                      text: 'Ver Relatório Completo',
-                      isPrimary: true,
-                    ),
-                  ),
-                ] else
-                  const Expanded(
+
+                if (_selectedInstitution == null)
+                  Expanded(
                     child: Center(
                       child: Text(
                         'Selecione uma instituição para iniciar a chamada.',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                        style: TextStyle(
+                          color: themeColors.onSurface.withOpacity(0.7),
+                          fontSize: 16,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -211,32 +282,46 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // --- HELPER FUNCTIONS ---
-
   Widget _buildInstitutionSelector() {
     return _buildDropdownField(
       hintText: 'Selecione a Instituição',
-      items: ['IFSP', 'FATEC'],
+      items: institutions,
       value: _selectedInstitution,
       onChanged: (value) => _onInstitutionSelected(value),
     );
   }
 
   Widget _buildSummaryBar(int present, int absent, int total) {
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+        filter: ImageFilter.blur(
+          sigmaX: isDark ? 5.0 : 0.0,
+          sigmaY: isDark ? 5.0 : 0.0,
+        ),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withAlpha(15),
+            color: isDark
+                ? Colors.white.withAlpha(15)
+                : Colors.black.withAlpha(5),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withAlpha(30)
+                  : Colors.black.withAlpha(10),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem('Total', total.toString(), Colors.white),
+              _buildSummaryItem(
+                'Total',
+                total.toString(),
+                themeColors.onSurface,
+              ),
               _buildSummaryItem('Presentes', present.toString(), presentColor),
               _buildSummaryItem('Ausentes', absent.toString(), absentColor),
             ],
@@ -259,13 +344,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.white.withAlpha(179), fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            fontSize: 12,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildAttendanceListItem(User student, AttendanceStatus status) {
+    final themeColors = Theme.of(context).colorScheme;
     Color borderColor;
     switch (status) {
       case AttendanceStatus.present:
@@ -285,7 +374,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: primaryAccentColor,
+          backgroundColor: themeColors.primary,
           child: Text(
             '${student.name[0]}${student.surname[0]}',
             style: const TextStyle(
@@ -296,14 +385,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         ),
         title: Text(
           '${student.name} ${student.surname}',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: themeColors.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         subtitle: Text(
           'Rota: ${student.route}',
-          style: TextStyle(color: Colors.white.withAlpha(179)),
+          style: TextStyle(color: themeColors.onSurface.withOpacity(0.7)),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -340,16 +429,22 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     String? value,
     required ValueChanged<String?> onChanged,
   }) {
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
-          color: darkAccentColor.withAlpha(220),
+          color: isDark ? darkAccentColor.withAlpha(220) : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.white.withAlpha(51)),
+            side: BorderSide(
+              color: isDark
+                  ? Colors.white.withAlpha(51)
+                  : Colors.black.withAlpha(20),
+            ),
           ),
-          textStyle: const TextStyle(
-            color: Colors.white,
+          textStyle: TextStyle(
+            color: themeColors.onSurface,
             fontFamily: 'Poppins',
             fontSize: 14,
           ),
@@ -358,43 +453,55 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+          filter: ImageFilter.blur(
+            sigmaX: isDark ? 5.0 : 0.0,
+            sigmaY: isDark ? 5.0 : 0.0,
+          ),
           child: DropdownButtonFormField<String>(
-            initialValue: value,
-            style: const TextStyle(
+            value: value,
+            style: TextStyle(
               fontFamily: 'Poppins',
-              color: Colors.white,
+              color: themeColors.onSurface,
               fontSize: 14,
             ),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withAlpha(26),
+              fillColor: isDark
+                  ? Colors.white.withAlpha(26)
+                  : Colors.black.withAlpha(10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withAlpha(51)),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? Colors.white.withAlpha(51)
+                      : Colors.black.withAlpha(20),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withAlpha(51)),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? Colors.white.withAlpha(51)
+                      : Colors.black.withAlpha(20),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: primaryAccentColor,
-                  width: 1.5,
-                ),
+                borderSide: BorderSide(color: themeColors.primary, width: 1.5),
               ),
             ),
             hint: Text(
               hintText,
               style: TextStyle(
                 fontFamily: 'Poppins',
-                color: Colors.white.withAlpha(150),
+                color: themeColors.onSurface.withOpacity(0.6),
                 fontSize: 14,
               ),
             ),
-            dropdownColor: darkAccentColor.withAlpha(240),
-            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+            dropdownColor: isDark
+                ? darkAccentColor.withAlpha(240)
+                : themeColors.surface,
+            icon: Icon(Icons.keyboard_arrow_down, color: themeColors.onSurface),
             items: items
                 .map(
                   (String val) =>
@@ -413,30 +520,41 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     required String text,
     bool isPrimary = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColors = Theme.of(context).colorScheme;
+    final isLoading =
+        (text == 'Gerar PDF Global (30 dias)' && _isGeneratingReport);
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        filter: ImageFilter.blur(
+          sigmaX: isDark ? 10.0 : 0.0,
+          sigmaY: isDark ? 10.0 : 0.0,
+        ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: isPrimary
-                ? primaryAccentColor.withAlpha(200)
-                : Colors.white.withAlpha(26),
-            foregroundColor: isPrimary ? Colors.black : Colors.white,
+                ? themeColors.primary.withAlpha(200)
+                : (isDark
+                      ? Colors.white.withAlpha(26)
+                      : Colors.black.withAlpha(5)),
+            foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
                 color: isPrimary
-                    ? primaryAccentColor
-                    : Colors.white.withAlpha(51),
+                    ? themeColors.primary
+                    : (isDark
+                          ? Colors.white.withAlpha(51)
+                          : Colors.black.withAlpha(20)),
                 width: 1.5,
               ),
             ),
             elevation: 0,
           ),
           onPressed: onPressed,
-          child: _isLoading && isPrimary
+          child: isLoading
               ? const SizedBox(
                   width: 24,
                   height: 24,

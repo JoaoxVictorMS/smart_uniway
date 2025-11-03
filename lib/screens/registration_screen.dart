@@ -16,19 +16,24 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _courseController = TextEditingController();
   final _registrationController = TextEditingController();
-  final _institutionController = TextEditingController();
-  final _periodController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Variáveis de estado para Dropdowns
   String? _selectedCity;
+  String? _selectedInstitution; // NOVO
   String? _selectedRoute;
+  String? _selectedSemester; // NOVO
+
+  // Outras variáveis de estado
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _agreedToTerms = false;
@@ -39,9 +44,20 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   late Animation<Offset> _animationBlob2;
 
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
+  static const Color primaryAccentColor = Color(0xFFE9B44C);
   static const Color subtleLightColor = Color(0xFF4A4A58);
   static const Color darkAccentColor = Color(0xFF16213E);
+
+  // --- NOVAS LISTAS DE OPÇÕES ---
+  final List<String> institutions = [
+    'IFSP',
+    'CETEC',
+    'FATEC',
+    'UNIFIPA',
+    'ETEC',
+    'IMES',
+  ];
+  final List<String> semesters = List.generate(10, (i) => '${i + 1}º Semestre');
 
   @override
   void initState() {
@@ -50,7 +66,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat(reverse: true);
-
     _animationBlob1 =
         Tween<Offset>(
           begin: const Offset(-0.2, -0.8),
@@ -58,7 +73,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         ).animate(
           CurvedAnimation(parent: _auroraController, curve: Curves.easeInOut),
         );
-
     _animationBlob2 = Tween<Offset>(
       begin: const Offset(1.2, 0.3),
       end: const Offset(-1.2, -0.3),
@@ -73,11 +87,11 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     _phoneController.dispose();
     _courseController.dispose();
     _registrationController.dispose();
-    _institutionController.dispose();
-    _periodController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    // _institutionController não é mais necessário
+    // _periodController não é mais necessário
     super.dispose();
   }
 
@@ -93,17 +107,19 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       setState(() {
         _isLoading = true;
       });
+
       final newUser = User(
         name: _nameController.text.trim(),
         surname: _surnameController.text.trim(),
         phone: _phoneController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        userType: UserType.student,
+        userType: UserType.student, // Padrão
         course: _courseController.text.trim(),
         registrationNumber: _registrationController.text.trim(),
-        institution: _institutionController.text.trim(),
-        period: _periodController.text.trim(),
+        // --- ALTERADO ---
+        institution: _selectedInstitution,
+        period: _selectedSemester,
         route: _selectedRoute,
       );
       try {
@@ -117,9 +133,11 @@ class _RegistrationScreenState extends State<RegistrationScreen>
             (route) => false,
           );
         }
+      } on UserCreationException catch (e) {
+        _showFeedbackSnackBar(e.message, isError: true);
       } catch (e) {
         _showFeedbackSnackBar(
-          'Erro ao criar conta. O email já pode estar em uso.',
+          'Ocorreu um erro inesperado. Tente novamente.',
           isError: true,
         );
       } finally {
@@ -222,9 +240,8 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                                   hintText: 'Cidade',
                                   items: ['Catanduva', 'Pindorama', 'Palmares'],
                                   value: _selectedCity,
-                                  onChanged: (value) {
-                                    setState(() => _selectedCity = value);
-                                  },
+                                  onChanged: (value) =>
+                                      setState(() => _selectedCity = value),
                                 ),
                               ),
                             ],
@@ -250,10 +267,15 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                           const SizedBox(height: 16),
                           Row(
                             children: [
+                              // --- ALTERADO PARA DROPDOWN ---
                               Expanded(
-                                child: _buildTextField(
-                                  controller: _institutionController,
+                                child: _buildDropdownField(
                                   hintText: 'Instituição',
+                                  items: institutions,
+                                  value: _selectedInstitution,
+                                  onChanged: (value) => setState(
+                                    () => _selectedInstitution = value,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -262,17 +284,20 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                                   hintText: 'Rota',
                                   items: ['Rota 1', 'Rota 2', 'Rota 3'],
                                   value: _selectedRoute,
-                                  onChanged: (value) {
-                                    setState(() => _selectedRoute = value);
-                                  },
+                                  onChanged: (value) =>
+                                      setState(() => _selectedRoute = value),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildTextField(
-                            controller: _periodController,
-                            hintText: 'Período',
+                          // --- ALTERADO PARA DROPDOWN ---
+                          _buildDropdownField(
+                            hintText: 'Semestre',
+                            items: semesters,
+                            value: _selectedSemester,
+                            onChanged: (value) =>
+                                setState(() => _selectedSemester = value),
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
@@ -316,10 +341,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
       ),
     );
   }
-
-  // --- FUNÇÕES HELPER ---
-
-  // COLE TODAS ESTAS FUNÇÕES NO FINAL DO SEU ARQUIVO, DENTRO DO _RegistrationScreenState
 
   Widget _buildHeader() {
     return Row(

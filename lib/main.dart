@@ -1,6 +1,8 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:provider/provider.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/screens/admin_home_screen.dart';
 import 'package:smart_uniway/screens/attendance_screen.dart';
@@ -12,32 +14,109 @@ import 'package:smart_uniway/screens/student_home_screen.dart';
 import 'package:smart_uniway/screens/student_list_screen.dart';
 import 'package:smart_uniway/screens/welcome_screen.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
+import 'package:smart_uniway/services/database_service.dart';
+import 'package:smart_uniway/services/theme_provider.dart';
 
-void main() {
-  runApp(const SmartUniwayApp());
+void main() async {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  await DatabaseService.instance.database;
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const SmartUniwayApp(),
+    ),
+  );
+
+  FlutterNativeSplash.remove();
 }
 
 class SmartUniwayApp extends StatelessWidget {
   const SmartUniwayApp({super.key});
 
-  static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFF1A1A2E);
+  // --- CORREÇÃO AQUI ---
+  // As cores são definidas aqui, na classe principal
+  static const Color darkBackground = Color(0xFF1A1A2E);
+  static const Color lightBackground = Color(0xFFF4F6F8);
+  static const Color primaryAccent = Color(0xFFE9B44C);
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const _SmartUniwayCore(),
+    );
+  }
+}
+
+class _SmartUniwayCore extends StatelessWidget {
+  const _SmartUniwayCore();
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    // --- TEMA ESCURO ---
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      fontFamily: 'Poppins',
+      brightness: Brightness.dark,
+      // --- CORREÇÃO AQUI ---
+      // Acessa as cores da classe SmartUniwayApp
+      scaffoldBackgroundColor: SmartUniwayApp.darkBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white, size: 28),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Poppins',
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+          fontSize: 20,
+        ),
+      ),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: SmartUniwayApp.primaryAccent,
+        brightness: Brightness.dark,
+        surface: SmartUniwayApp.darkBackground,
+      ),
+    );
+
+    // --- TEMA CLARO ---
+    final lightTheme = ThemeData(
+      useMaterial3: true,
+      fontFamily: 'Poppins',
+      brightness: Brightness.light,
+      // --- CORREÇÃO AQUI ---
+      scaffoldBackgroundColor: SmartUniwayApp.lightBackground,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black, size: 28),
+        titleTextStyle: TextStyle(
+          fontFamily: 'Poppins',
+          fontWeight: FontWeight.w600,
+          color: Colors.black,
+          fontSize: 20,
+        ),
+      ),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: SmartUniwayApp.primaryAccent,
+        brightness: Brightness.light,
+        surface: SmartUniwayApp.lightBackground,
+        primary: SmartUniwayApp.primaryAccent,
+      ),
+    );
+
     return MaterialApp(
       title: 'Smart Uniway',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Poppins',
-        scaffoldBackgroundColor: backgroundColor,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryAccentColor,
-          brightness: Brightness.dark,
-          surface: const Color(0xFF1A1A2E), // CORRIGIDO: de 'background' para 'surface'
-        ),
-        useMaterial3: true,
-      ),
+
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeProvider.themeMode,
+
       home: const WelcomeScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
@@ -48,8 +127,6 @@ class SmartUniwayApp extends StatelessWidget {
               builder: (_) => const RegistrationScreen(),
             );
           case '/student_home':
-            // Assumimos que a navegação para student_home sempre usará AuthProvider
-            // Se o argumento for nulo, redirecionamos para o login
             if (settings.arguments is User) {
               final user = settings.arguments as User;
               return MaterialPageRoute(
@@ -59,7 +136,14 @@ class SmartUniwayApp extends StatelessWidget {
             }
             return MaterialPageRoute(builder: (_) => const LoginScreen());
           case '/admin_home':
-            return MaterialPageRoute(builder: (_) => const AdminHomeScreen());
+            if (settings.arguments is User) {
+              final user = settings.arguments as User;
+              return MaterialPageRoute(
+                builder: (_) =>
+                    AuthProvider(user: user, child: const AdminHomeScreen()),
+              );
+            }
+            return MaterialPageRoute(builder: (_) => const LoginScreen());
           case '/student_list':
             return MaterialPageRoute(builder: (_) => const StudentListScreen());
           case '/attendance':
@@ -81,8 +165,6 @@ class SmartUniwayApp extends StatelessWidget {
             }
             break;
         }
-        // CORRIGIDO: Garante que um valor é retornado caso nenhuma rota corresponda.
-        // Retornar null é o comportamento padrão para rota não encontrada.
         return null;
       },
     );

@@ -11,31 +11,43 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Pacotes do Banco de Dados
   sqflite: ^2.3.3+1
-  path: ^1.9.0      
+  path: ^1.9.0
   intl: ^0.20.2
+  
+  # Pacotes de UI e Funcionalidade
   cupertino_icons: ^1.0.8
   font_awesome_flutter: ^10.7.0
   fl_chart: ^1.1.0
-  pdf: ^3.10.8             # O motor principal para criar o documento PDF.
-  path_provider: ^2.1.3    # Para encontrar um local seguro para salvar o arquivo no celular.
-  open_filex: ^4.4.0         # Para abrir o arquivo PDF gerado com o visualizador padrão do celular.
+  pdf: ^3.10.8
+  path_provider: ^2.1.3
+  open_filex: ^4.4.0
+  
+  # Pacote da Splash Screen (LOCAL CORRETO)
+  flutter_native_splash: ^2.4.0
+
+  # Pacote para gerenciamento de estado (tema)
+  provider: ^6.1.2
+  
+  # Pacote para salvar a preferência do tema
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   
   flutter_lints: ^6.0.0
-  flutter_native_splash: ^2.4.0
+  
+  # Pacote dos Ícones (ADICIONADO)
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   
   assets:
     - assets/images/
-    # Se você adicionou a pasta de fontes, ela deve estar aqui também
-    # - fonts/
-
+    
   fonts:
     - family: Poppins
       fonts:
@@ -44,28 +56,25 @@ flutter:
           weight: 700
 
 # ----------------------------------------------------
-# Seção da Splash Screen - Corrigida e Elaborada
+# Configuração da Splash Screen (Correta)
 # ----------------------------------------------------
 flutter_native_splash:
-  # Cor de fundo padrão (modo claro).
   color: "#1A1A2E"
-  # Imagem padrão (modo claro).
   image: assets/images/smart_uniway_logo.png
-  
-  # Cor de fundo para o Modo Escuro.
   color_dark: "#1A1A2E"
-  # Imagem para o Modo Escuro (pode ser a mesma ou uma versão otimizada).
   image_dark: assets/images/smart_uniway_logo.png
-  
-  # Adiciona um branding na parte inferior (opcional).
-  # branding: assets/images/branding.png
-
-  # Garante que a splash screen ocupe a tela inteira.
   fullscreen: true
-
-  # Configurações específicas para Android 12+ para garantir consistência.
   android_12:
-    color: "#1A1A2E"
     image: assets/images/smart_uniway_logo.png
-    color_dark: "#1A1A2E"
+    icon_background_color: "#1A1A2E"
     image_dark: assets/images/smart_uniway_logo.png
+    icon_background_color_dark: "#1A1A2E"
+
+# ----------------------------------------------------
+# Configuração dos Ícones (ADICIONADA)
+# ----------------------------------------------------
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/smart_uniway_logo.png"
+  min_sdk_android: 21

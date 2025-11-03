@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_uniway/models/user_model.dart';
+import 'package:smart_uniway/screens/admin_home_screen.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
 import 'package:smart_uniway/services/database_service.dart';
 import 'package:smart_uniway/screens/student_home_screen.dart';
@@ -73,27 +74,33 @@ class _LoginScreenState extends State<LoginScreen>
           _passwordController.text,
         );
 
-        // CORREÇÃO 1: Verifica se a tela ainda existe após a busca no banco
         if (!mounted) return;
 
         if (user != null) {
           _showFeedbackSnackBar('Login realizado com sucesso!');
           await Future.delayed(const Duration(seconds: 1));
 
-          // CORREÇÃO 2: Verifica se a tela ainda existe após a pausa
           if (!mounted) return;
 
+          // --- ALTERAÇÃO PRINCIPAL AQUI ---
+          // Agora, ambos os tipos de usuário são envolvidos pelo AuthProvider.
+
+          Widget homeScreen;
           if (user.userType == UserType.admin) {
-            Navigator.pushReplacementNamed(context, '/admin_home');
+            homeScreen = const AdminHomeScreen();
           } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    AuthProvider(user: user, child: const StudentHomeScreen()),
-              ),
-            );
+            homeScreen = const StudentHomeScreen();
           }
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AuthProvider(
+                user: user,
+                child: homeScreen, // Navega para a tela correta
+              ),
+            ),
+          );
         } else {
           _showFeedbackSnackBar('Email ou senha inválidos.', isError: true);
         }
