@@ -458,7 +458,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             sigmaY: isDark ? 5.0 : 0.0,
           ),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             style: TextStyle(
               fontFamily: 'Poppins',
               color: themeColors.onSurface,

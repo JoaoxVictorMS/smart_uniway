@@ -300,7 +300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           themeProvider.toggleTheme();
         },
         // CORRIGIDO: Usa a cor do tema
-        activeColor: colors.primary,
+        activeThumbColor: colors.primary,
       ),
     );
   }
