@@ -1,11 +1,8 @@
-// lib/screens/attendance_screen.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/database_service.dart';
-import 'package:smart_uniway/services/report_service.dart'; // Importa o serviço de relatório
 
 enum AttendanceStatus { present, absent, unmarked }
 
@@ -25,7 +22,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final Map<String, AttendanceStatus> _attendanceStatus = {};
   String? _selectedInstitution;
   bool _isLoading = false;
-  bool _isGeneratingReport = false;
+  // A variável _isGeneratingReport foi removida
   final String _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
   final List<String> institutions = [
     'IFSP',
@@ -98,50 +95,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // --- FUNÇÃO ATUALIZADA ---
-  Future<void> _handleGlobalReportButton() async {
-    setState(() {
-      _isGeneratingReport = true;
-    });
-    try {
-      final endDate = DateTime.now();
-      final startDate = endDate.subtract(const Duration(days: 30));
-
-      final reportData = await DatabaseService.instance
-          .getGlobalAttendanceReport(startDate, endDate);
-
-      if (reportData.isEmpty && mounted) {
-        _showFeedbackSnackBar(
-          'Não há dados de chamada para gerar o relatório.',
-          isError: true,
-        );
-        setState(() {
-          _isGeneratingReport = false;
-        });
-        return;
-      }
-
-      await ReportService.generateGlobalAttendancePdf(reportData);
-    } catch (e) {
-      _showFeedbackSnackBar('Erro ao gerar o relatório.', isError: true);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingReport = false;
-        });
-      }
-    }
-  }
-
-  void _showFeedbackSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
-  }
+  // A função _handleGlobalReportButton foi REMOVIDA
+  // A função _showFeedbackSnackBar foi REMOVIDA (não é mais necessária)
 
   @override
   Widget build(BuildContext context) {
@@ -187,33 +142,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 _buildInstitutionSelector(),
                 const SizedBox(height: 24),
 
-                // Botão para o relatório visual (de instituição única)
-                if (_selectedInstitution != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: _buildGlassButton(
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/report',
-                          arguments: _selectedInstitution,
-                        );
-                      },
-                      text: 'Ver Gráfico da Instituição',
-                      isPrimary: false,
-                    ),
-                  ),
-
-                // Botão para Relatório Global em PDF
-                _buildGlassButton(
-                  onPressed: _isGeneratingReport
-                      ? null
-                      : _handleGlobalReportButton,
-                  text: 'Gerar PDF Global (30 dias)',
-                  isPrimary: true,
-                ),
-
-                const SizedBox(height: 24),
+                // --- BOTÕES DE RELATÓRIO REMOVIDOS ---
 
                 // Painel de resumo da chamada atual
                 if (_selectedInstitution != null)
@@ -281,6 +210,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
   }
+
+  // --- FUNÇÕES HELPER (INALTERADAS) ---
 
   Widget _buildInstitutionSelector() {
     return _buildDropdownField(
@@ -391,7 +322,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           ),
         ),
         subtitle: Text(
-          'Rota: ${student.route}',
+          'Rota: ${student.route ?? 'N/A'}',
           style: TextStyle(color: themeColors.onSurface.withOpacity(0.7)),
         ),
         trailing: Row(
@@ -458,7 +389,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             sigmaY: isDark ? 5.0 : 0.0,
           ),
           child: DropdownButtonFormField<String>(
-            initialValue: value,
+            value: value,
             style: TextStyle(
               fontFamily: 'Poppins',
               color: themeColors.onSurface,
@@ -515,64 +446,5 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildGlassButton({
-    required VoidCallback? onPressed,
-    required String text,
-    bool isPrimary = false,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeColors = Theme.of(context).colorScheme;
-    final isLoading =
-        (text == 'Gerar PDF Global (30 dias)' && _isGeneratingReport);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isDark ? 10.0 : 0.0,
-          sigmaY: isDark ? 10.0 : 0.0,
-        ),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isPrimary
-                ? themeColors.primary.withAlpha(200)
-                : (isDark
-                      ? Colors.white.withAlpha(26)
-                      : Colors.black.withAlpha(5)),
-            foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isPrimary
-                    ? themeColors.primary
-                    : (isDark
-                          ? Colors.white.withAlpha(51)
-                          : Colors.black.withAlpha(20)),
-                width: 1.5,
-              ),
-            ),
-            elevation: 0,
-          ),
-          onPressed: onPressed,
-          child: isLoading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: Colors.black,
-                  ),
-                )
-              : Text(
-                  text,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
+  // A função _buildGlassButton foi REMOVIDA
 }

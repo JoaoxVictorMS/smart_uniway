@@ -8,8 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 
 class ReportService {
-  // --- FUNÇÃO ANTIGA (RELATÓRIO ÚNICO) ---
-  // A deixamos aqui caso seja útil em outro lugar
+  // --- FUNÇÃO ANTIGA (Relatório de Instituição Única) ---
   static Future<void> generateAttendancePdf(
     String institution,
     Map<String, Map<String, int>> reportData,
@@ -19,7 +18,10 @@ class ReportService {
     final headers = ['Data', 'Presentes', 'Ausentes', 'Total'];
     final List<List<String>> data = [];
 
-    reportData.forEach((date, status) {
+    // Ordena as datas antes de adicionar
+    final sortedDates = reportData.keys.toList()..sort();
+    for (var date in sortedDates) {
+      final status = reportData[date]!;
       final formattedDate = DateFormat(
         'dd/MM/yyyy',
       ).format(DateTime.parse(date));
@@ -32,7 +34,7 @@ class ReportService {
         absent.toString(),
         total.toString(),
       ]);
-    });
+    }
 
     pdf.addPage(
       pw.Page(
@@ -57,7 +59,7 @@ class ReportService {
         },
       ),
     );
-    await _saveAndOpenFile(pdf, 'relatorio_presenca_$institution.pdf');
+    await _saveAndOpenFile(pdf, 'relatorio_$institution.pdf');
   }
 
   // --- NOVA FUNÇÃO ADICIONADA (RELATÓRIO GLOBAL) ---
@@ -68,12 +70,17 @@ class ReportService {
     final today = DateFormat('dd/MM/yyyy').format(DateTime.now());
     final headers = ['Data', 'Presentes', 'Ausentes', 'Total'];
 
-    // Uma página por instituição
-    for (var institution in globalData.keys) {
+    // Ordena as instituições por nome
+    final sortedInstitutions = globalData.keys.toList()..sort();
+
+    for (var institution in sortedInstitutions) {
       final reportData = globalData[institution]!;
       final List<List<String>> data = [];
 
-      reportData.forEach((date, status) {
+      // Ordena as datas para a tabela
+      final sortedDates = reportData.keys.toList()..sort();
+      for (var date in sortedDates) {
+        final status = reportData[date]!;
         final formattedDate = DateFormat(
           'dd/MM/yyyy',
         ).format(DateTime.parse(date));
@@ -86,7 +93,7 @@ class ReportService {
           absent.toString(),
           total.toString(),
         ]);
-      });
+      }
 
       pdf.addPage(
         pw.Page(
@@ -112,10 +119,10 @@ class ReportService {
         ),
       );
     }
-    await _saveAndOpenFile(pdf, 'relatorio_presenca_global.pdf');
+    await _saveAndOpenFile(pdf, 'relatorio_global.pdf');
   }
 
-  // --- NOVOS HELPERS DE PDF (PARA EVITAR REPETIÇÃO) ---
+  // --- HELPERS DE PDF (PARA EVITAR REPETIÇÃO) ---
   static pw.Widget _buildPdfHeader(String today) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -133,6 +140,11 @@ class ReportService {
     List<String> headers,
     List<List<String>> data,
   ) {
+    if (data.isEmpty) {
+      return pw.Text(
+        'Nenhum dado de presença registrado para esta instituição no período.',
+      );
+    }
     return pw.TableHelper.fromTextArray(
       headers: headers,
       data: data,

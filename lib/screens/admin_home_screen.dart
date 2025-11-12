@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
 import 'package:smart_uniway/services/database_service.dart';
+import 'package:smart_uniway/services/report_service.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -18,7 +19,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   static const Color backgroundColor = Color(0xFF1A1A2E);
   static const Color primaryAccentColor = Color(0xFFE9B44C);
 
-  // --- NOVAS CORES DO GRÁFICO ---
+  // Cores do Gráfico
   static const Color ifspColor = Color(0xFFD94E4E);
   static const Color cetecColor = Color(0xFF4ECFD9);
   static const Color fatecColor = Color(0xFF4ED964);
@@ -30,13 +31,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late Future<Map<String, int>> _chartDataFuture;
   int touchedIndex = -1;
 
+  // --- VARIÁVEL QUE FALTAVA ---
+  bool _isGeneratingReport = false;
+
   @override
   void initState() {
     super.initState();
     _chartDataFuture = DatabaseService.instance.getStudentCountByInstitution();
   }
 
-  // --- MAPA DE CORES ATUALIZADO ---
   Map<String, Color> get institutionColorMap => {
     'IFSP': ifspColor,
     'CETEC': cetecColor,
@@ -46,6 +49,51 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     'IMES': imesColor,
   };
 
+  Future<void> _handleGlobalReport() async {
+    setState(() {
+      _isGeneratingReport = true;
+    });
+
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(const Duration(days: 30));
+
+    try {
+      final reportData = await DatabaseService.instance
+          .getGlobalAttendanceReport(startDate, endDate);
+
+      if (reportData.isEmpty && mounted) {
+        _showFeedbackSnackBar(
+          'Não há dados de chamada para gerar o relatório.',
+          isError: true,
+        );
+        setState(() {
+          _isGeneratingReport = false;
+        });
+        return;
+      }
+
+      await ReportService.generateGlobalAttendancePdf(reportData);
+    } catch (e) {
+      _showFeedbackSnackBar('Erro ao gerar o relatório.', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingReport = false;
+        });
+      }
+    }
+  }
+
+  void _showFeedbackSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = AuthProvider.of(context)?.user;
@@ -53,7 +101,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: themeColors.onSurface,
+          size: 28,
+        ), // Corrigido para tema
+      ),
       drawer: _buildAppDrawer(context, user),
       body: Stack(
         children: [
@@ -156,7 +211,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  // --- FUNÇÃO ATUALIZADA ---
   List<PieChartSectionData> _buildChartSections(Map<String, int> data) {
     final totalStudents = data.values.fold(0, (sum, count) => sum + count);
     if (totalStudents == 0) return [];
@@ -169,9 +223,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       final percentage = (count / totalStudents) * 100;
       sections.add(
         PieChartSectionData(
-          color:
-              institutionColorMap[institution] ??
-              otherColor, // Usa o mapa de cores
+          color: institutionColorMap[institution] ?? otherColor,
           value: percentage,
           title: '${percentage.toStringAsFixed(0)}%',
           radius: radius,
@@ -188,7 +240,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return sections;
   }
 
-  // --- FUNÇÃO ATUALIZADA ---
   Widget _buildDynamicIndicators(Map<String, int> data) {
     final themeColors = Theme.of(context).colorScheme;
     List<Widget> indicators = [];
@@ -200,11 +251,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           themeColors.onSurface,
         ),
       );
-      indicators.add(const SizedBox(width: 16));
     });
-    if (indicators.isNotEmpty) {
-      indicators.removeLast();
-    }
     // Usa Wrap para quebrar a linha se não houver espaço
     return Wrap(
       alignment: WrapAlignment.center,
@@ -239,6 +286,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget _buildAppDrawer(BuildContext context, User? user) {
     final themeColors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final drawerBackgroundColor = isDark
+        ? backgroundColor.withAlpha(200)
+        : themeColors.surface.withAlpha(240); // Corrigido para modo claro
+
     return ClipRRect(
       borderRadius: const BorderRadius.only(
         topRight: Radius.circular(20),
@@ -248,9 +300,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
         child: Drawer(
           width: MediaQuery.of(context).size.width * 0.75,
-          backgroundColor: isDark
-              ? backgroundColor.withAlpha(200)
-              : themeColors.surface.withAlpha(240),
+          backgroundColor: drawerBackgroundColor,
           child: Column(
             children: [
               if (user != null)
@@ -320,6 +370,47 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   Navigator.pushNamed(context, '/attendance');
                 },
               ),
+              ListTile(
+                leading: Icon(
+                  Icons.bar_chart_outlined,
+                  color: themeColors.onSurface,
+                ),
+                title: Text(
+                  'Relatório por Instituição',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/report');
+                },
+              ),
+              ListTile(
+                leading: _isGeneratingReport
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: themeColors.onSurface,
+                        ),
+                      )
+                    : Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: themeColors.onSurface,
+                      ),
+                title: Text(
+                  'Gerar PDF Global (30 dias)',
+                  style: TextStyle(
+                    color: themeColors.onSurface,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                onTap: _isGeneratingReport ? null : _handleGlobalReport,
+              ),
+
               Divider(
                 color: themeColors.onSurface.withOpacity(0.2),
                 indent: 16,

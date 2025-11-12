@@ -1,5 +1,3 @@
-// lib/services/database_service.dart
-
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:smart_uniway/models/user_model.dart';
@@ -79,8 +77,6 @@ class DatabaseService {
       'password': 'admin',
       'userType': 'admin',
     });
-
-    // --- NOVOS ALUNOS DE EXEMPLO ADICIONADOS ---
 
     // 3 Alunos - FATEC
     await db.insert('users', {

@@ -1,5 +1,3 @@
-// lib/screens/report_screen.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,38 +6,92 @@ import 'package:smart_uniway/services/database_service.dart';
 import 'package:smart_uniway/services/report_service.dart';
 
 class ReportScreen extends StatefulWidget {
-  final String institution;
-  const ReportScreen({super.key, required this.institution});
-
+  const ReportScreen({super.key});
   @override
   State<ReportScreen> createState() => _ReportScreenState();
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  // O Future agora começa nulo e só é chamado após clicar em "Gerar"
-  Future<Map<String, Map<String, int>>>? _reportFuture;
-  bool _isGeneratingPdf = false;
-
-  // Estados para as datas selecionadas
+  // Estado para os filtros
+  final List<String> institutions = [
+    'IFSP',
+    'CETEC',
+    'FATEC',
+    'UNIFIPA',
+    'ETEC',
+    'IMES',
+  ];
+  String? _selectedInstitution;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 6));
   DateTime _endDate = DateTime.now();
 
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  // Estado para os dados
+  Future<Map<String, Map<String, int>>>? _reportFuture;
+  bool _isGeneratingPdf = false;
+
+  // Paleta de Cores do Gráfico
   static const Color presentColor = Colors.green;
   static const Color absentColor = Colors.red;
 
-  // Função chamada para buscar os dados
+  // --- LÓGICA DA TELA ---
+
   void _fetchReport() {
+    if (_selectedInstitution == null) {
+      _showFeedbackSnackBar(
+        'Por favor, selecione uma instituição.',
+        isError: true,
+      );
+      return;
+    }
     setState(() {
       _reportFuture = DatabaseService.instance.getAttendanceReport(
-        widget.institution,
+        _selectedInstitution!,
         _startDate,
         _endDate,
       );
     });
   }
 
-  // Função para abrir o seletor de data
+  Future<void> _handleExportPdf() async {
+    if (_reportFuture == null) {
+      _showFeedbackSnackBar(
+        'Gere um relatório no gráfico antes de exportar.',
+        isError: true,
+      );
+      return;
+    }
+    // Garante que uma instituição foi selecionada para o nome do arquivo
+    if (_selectedInstitution == null) {
+      _showFeedbackSnackBar(
+        'Por favor, selecione uma instituição.',
+        isError: true,
+      );
+      return;
+    }
+    setState(() {
+      _isGeneratingPdf = true;
+    });
+    try {
+      final reportData = await _reportFuture!;
+      if (reportData.isEmpty) {
+        _showFeedbackSnackBar('Não há dados para exportar.', isError: true);
+        return;
+      }
+      await ReportService.generateAttendancePdf(
+        _selectedInstitution!,
+        reportData,
+      );
+    } catch (e) {
+      _showFeedbackSnackBar('Erro ao gerar o relatório em PDF.', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingPdf = false;
+        });
+      }
+    }
+  }
+
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -55,35 +107,6 @@ class _ReportScreenState extends State<ReportScreen> {
           _endDate = picked;
         }
       });
-    }
-  }
-
-  Future<void> _handleExportPdf() async {
-    if (_reportFuture == null) {
-      _showFeedbackSnackBar(
-        'Gere um relatório antes de exportar.',
-        isError: true,
-      );
-      return;
-    }
-    setState(() {
-      _isGeneratingPdf = true;
-    });
-    try {
-      final reportData = await _reportFuture!;
-      if (reportData.isEmpty) {
-        _showFeedbackSnackBar('Não há dados para exportar.', isError: true);
-        return;
-      }
-      await ReportService.generateAttendancePdf(widget.institution, reportData);
-    } catch (e) {
-      _showFeedbackSnackBar('Erro ao gerar o relatório em PDF.', isError: true);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingPdf = false;
-        });
-      }
     }
   }
 
@@ -104,7 +127,9 @@ class _ReportScreenState extends State<ReportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Relatório de ${widget.institution}'),
+        // --- CORREÇÃO AQUI ---
+        // Título genérico, pois a instituição é selecionada na tela
+        title: const Text('Gerar Relatório'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -112,13 +137,13 @@ class _ReportScreenState extends State<ReportScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: _isGeneratingPdf
-                ? const Center(
+                ? Center(
                     child: SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 3,
-                        color: Colors.white,
+                        color: themeColors.onSurface,
                       ),
                     ),
                   )
@@ -145,7 +170,18 @@ class _ReportScreenState extends State<ReportScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               children: [
-                // --- NOVOS SELETORES DE DATA ---
+                // --- PAINEL DE FILTROS ---
+                _buildDropdownField(
+                  hintText: 'Selecione a Instituição',
+                  items: institutions,
+                  value: _selectedInstitution,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedInstitution = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -169,20 +205,20 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildGlassButton(
-                  onPressed: _fetchReport, // Botão para acionar a busca
-                  text: 'Gerar Relatório',
+                  onPressed: _fetchReport,
+                  text: 'Gerar Gráfico',
                   isPrimary: true,
                 ),
                 const SizedBox(height: 24),
 
-                // --- GRÁFICO AGORA DENTRO DO EXPANDED ---
+                // --- ÁREA DO GRÁFICO ---
                 Expanded(
                   child: _reportFuture == null
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            'Selecione um intervalo de datas.',
+                            'Selecione os filtros e gere o relatório.',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: themeColors.onSurface.withOpacity(0.7),
                               fontSize: 16,
                             ),
                           ),
@@ -192,20 +228,22 @@ class _ReportScreenState extends State<ReportScreen> {
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
-                              return const Center(
+                              return Center(
                                 child: CircularProgressIndicator(
-                                  color: primaryAccentColor,
+                                  color: themeColors.primary,
                                 ),
                               );
                             }
                             if (snapshot.hasError ||
                                 !snapshot.hasData ||
                                 snapshot.data!.isEmpty) {
-                              return const Center(
+                              return Center(
                                 child: Text(
                                   'Nenhum dado encontrado para este período.',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: themeColors.onSurface.withOpacity(
+                                      0.7,
+                                    ),
                                     fontSize: 16,
                                   ),
                                   textAlign: TextAlign.center,
@@ -275,7 +313,8 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  // --- NOVA FUNÇÃO HELPER ---
+  // --- FUNÇÕES HELPER DE UI ---
+
   Widget _buildDateButton(
     BuildContext context,
     String label,
@@ -324,7 +363,6 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  // --- FUNÇÃO HELPER COPIADA DA TELA DE PERFIL ---
   Widget _buildGlassButton({
     required VoidCallback? onPressed,
     required String text,
@@ -332,48 +370,145 @@ class _ReportScreenState extends State<ReportScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColors = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isDark ? 10.0 : 0.0,
-          sigmaY: isDark ? 10.0 : 0.0,
-        ),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isPrimary
-                ? themeColors.primary.withAlpha(200)
-                : (isDark
-                      ? Colors.white.withAlpha(26)
-                      : Colors.black.withAlpha(5)),
-            foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isPrimary
-                    ? themeColors.primary
-                    : (isDark
-                          ? Colors.white.withAlpha(51)
-                          : Colors.black.withAlpha(20)),
-                width: 1.5,
-              ),
-            ),
-            elevation: 0,
+    return SizedBox(
+      width: double.infinity,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: isDark ? 10.0 : 0.0,
+            sigmaY: isDark ? 10.0 : 0.0,
           ),
-          onPressed: onPressed,
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isPrimary
+                  ? themeColors.primary.withAlpha(200)
+                  : (isDark
+                        ? Colors.white.withAlpha(26)
+                        : Colors.black.withAlpha(5)),
+              foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isPrimary
+                      ? themeColors.primary
+                      : (isDark
+                            ? Colors.white.withAlpha(51)
+                            : Colors.black.withAlpha(20)),
+                  width: 1.5,
+                ),
+              ),
+              elevation: 0,
+            ),
+            onPressed: onPressed,
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildDropdownField({
+    required String hintText,
+    required List<String> items,
+    String? value,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: isDark ? const Color(0xFF16213E).withAlpha(220) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isDark
+                  ? Colors.white.withAlpha(51)
+                  : Colors.black.withAlpha(20),
+            ),
+          ),
+          textStyle: TextStyle(
+            color: themeColors.onSurface,
+            fontFamily: 'Poppins',
+            fontSize: 14,
+          ),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: isDark ? 5.0 : 0.0,
+            sigmaY: isDark ? 5.0 : 0.0,
+          ),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              color: themeColors.onSurface,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: isDark
+                  ? Colors.white.withAlpha(26)
+                  : Colors.black.withAlpha(10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? Colors.white.withAlpha(51)
+                      : Colors.black.withAlpha(20),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? Colors.white.withAlpha(51)
+                      : Colors.black.withAlpha(20),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: themeColors.primary, width: 1.5),
+              ),
+            ),
+            hint: Text(
+              hintText,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                color: themeColors.onSurface.withOpacity(0.6),
+                fontSize: 14,
+              ),
+            ),
+            dropdownColor: isDark
+                ? const Color(0xFF16213E).withAlpha(240)
+                : themeColors.surface,
+            icon: Icon(Icons.keyboard_arrow_down, color: themeColors.onSurface),
+            items: items
+                .map(
+                  (String val) =>
+                      DropdownMenuItem<String>(value: val, child: Text(val)),
+                )
+                .toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- FUNÇÕES HELPER DO GRÁFICO ---
 
   double _getMaxY(Map<String, Map<String, int>> data) {
     double maxY = 0;
@@ -412,15 +547,12 @@ class _ReportScreenState extends State<ReportScreen> {
       fontWeight: FontWeight.bold,
       fontSize: 14,
     );
-
     if (value.toInt() >= sortedDates.length) {
       return const Text('');
     }
-
     final dateString = sortedDates[value.toInt()];
     final date = DateTime.parse(dateString);
     final formattedDate = DateFormat('dd/MM').format(date);
-
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
       child: Text(formattedDate, style: style),
@@ -432,12 +564,10 @@ class _ReportScreenState extends State<ReportScreen> {
   ) {
     final sortedDates = data.keys.toList()..sort();
     List<BarChartGroupData> barGroups = [];
-
     for (int i = 0; i < sortedDates.length; i++) {
       final dateString = sortedDates[i];
       final presentCount = data[dateString]?['present']?.toDouble() ?? 0;
       final absentCount = data[dateString]?['absent']?.toDouble() ?? 0;
-
       barGroups.add(
         BarChartGroupData(
           x: i,

@@ -35,36 +35,21 @@ void main() async {
 class SmartUniwayApp extends StatelessWidget {
   const SmartUniwayApp({super.key});
 
-  // --- CORREÇÃO AQUI ---
-  // As cores são definidas aqui, na classe principal
   static const Color darkBackground = Color(0xFF1A1A2E);
   static const Color lightBackground = Color(0xFFF4F6F8);
   static const Color primaryAccent = Color(0xFFE9B44C);
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const _SmartUniwayCore(),
-    );
-  }
-}
-
-class _SmartUniwayCore extends StatelessWidget {
-  const _SmartUniwayCore();
-
-  @override
-  Widget build(BuildContext context) {
+    // Ouve o provider
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    // --- TEMA ESCURO ---
+    // Define os temas
     final darkTheme = ThemeData(
       useMaterial3: true,
       fontFamily: 'Poppins',
       brightness: Brightness.dark,
-      // --- CORREÇÃO AQUI ---
-      // Acessa as cores da classe SmartUniwayApp
-      scaffoldBackgroundColor: SmartUniwayApp.darkBackground,
+      scaffoldBackgroundColor: darkBackground,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -77,19 +62,17 @@ class _SmartUniwayCore extends StatelessWidget {
         ),
       ),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: SmartUniwayApp.primaryAccent,
+        seedColor: primaryAccent,
         brightness: Brightness.dark,
-        surface: SmartUniwayApp.darkBackground,
+        surface: darkBackground,
       ),
     );
 
-    // --- TEMA CLARO ---
     final lightTheme = ThemeData(
       useMaterial3: true,
       fontFamily: 'Poppins',
       brightness: Brightness.light,
-      // --- CORREÇÃO AQUI ---
-      scaffoldBackgroundColor: SmartUniwayApp.lightBackground,
+      scaffoldBackgroundColor: lightBackground,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -102,10 +85,10 @@ class _SmartUniwayCore extends StatelessWidget {
         ),
       ),
       colorScheme: ColorScheme.fromSeed(
-        seedColor: SmartUniwayApp.primaryAccent,
+        seedColor: primaryAccent,
         brightness: Brightness.light,
-        surface: SmartUniwayApp.lightBackground,
-        primary: SmartUniwayApp.primaryAccent,
+        surface: lightBackground,
+        primary: primaryAccent,
       ),
     );
 
@@ -149,13 +132,7 @@ class _SmartUniwayCore extends StatelessWidget {
           case '/attendance':
             return MaterialPageRoute(builder: (_) => const AttendanceScreen());
           case '/report':
-            if (settings.arguments is String) {
-              final institution = settings.arguments as String;
-              return MaterialPageRoute(
-                builder: (_) => ReportScreen(institution: institution),
-              );
-            }
-            break;
+            return MaterialPageRoute(builder: (_) => const ReportScreen());
           case '/profile':
             if (settings.arguments is User) {
               final user = settings.arguments as User;
