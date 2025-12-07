@@ -16,7 +16,7 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color presentColor = Colors.green;
   static const Color absentColor = Colors.red;
 
@@ -208,7 +208,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                         '${user.name[0]}${user.surname[0]}',
                         style: const TextStyle(
                           fontSize: 24,
-                          color: Colors.black,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

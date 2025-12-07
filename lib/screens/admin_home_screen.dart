@@ -17,7 +17,7 @@ class AdminHomeScreen extends StatefulWidget {
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
 
   // Cores do Gráfico
   static const Color ifspColor = Color(0xFFD94E4E);
@@ -31,7 +31,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late Future<Map<String, int>> _chartDataFuture;
   int touchedIndex = -1;
 
-  // --- VARIÁVEL QUE FALTAVA ---
   bool _isGeneratingReport = false;
 
   @override
@@ -107,7 +106,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         iconTheme: IconThemeData(
           color: themeColors.onSurface,
           size: 28,
-        ), // Corrigido para tema
+        ),
       ),
       drawer: _buildAppDrawer(context, user),
       body: Stack(
@@ -252,7 +251,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
       );
     });
-    // Usa Wrap para quebrar a linha se não houver espaço
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16.0,
@@ -289,7 +287,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     final drawerBackgroundColor = isDark
         ? backgroundColor.withAlpha(200)
-        : themeColors.surface.withAlpha(240); // Corrigido para modo claro
+        : themeColors.surface.withAlpha(240);
 
     return ClipRRect(
       borderRadius: const BorderRadius.only(
@@ -322,12 +320,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   currentAccountPicture: CircleAvatar(
-                    backgroundColor: themeColors.primary,
+                    backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
                     child: Text(
                       '${user.name[0]}${user.surname[0]}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

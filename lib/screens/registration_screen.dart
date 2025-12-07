@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/database_service.dart';
 
@@ -27,9 +26,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
 
   // Variáveis de estado para Dropdowns
   String? _selectedCity;
-  String? _selectedInstitution; // NOVO
+  String? _selectedInstitution;
   String? _selectedRoute;
-  String? _selectedSemester; // NOVO
+  String? _selectedSemester;
 
   // Outras variáveis de estado
   bool _isPasswordVisible = false;
@@ -42,11 +41,10 @@ class _RegistrationScreenState extends State<RegistrationScreen>
   late Animation<Offset> _animationBlob2;
 
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color subtleLightColor = Color(0xFF4A4A58);
   static const Color darkAccentColor = Color(0xFF16213E);
 
-  // --- NOVAS LISTAS DE OPÇÕES ---
   final List<String> institutions = [
     'IFSP',
     'CETEC',
@@ -88,8 +86,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    // _institutionController não é mais necessário
-    // _periodController não é mais necessário
     super.dispose();
   }
 
@@ -112,10 +108,9 @@ class _RegistrationScreenState extends State<RegistrationScreen>
         phone: _phoneController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        userType: UserType.student, // Padrão
+        userType: UserType.student,
         course: _courseController.text.trim(),
         registrationNumber: _registrationController.text.trim(),
-        // --- ALTERADO ---
         institution: _selectedInstitution,
         period: _selectedSemester,
         route: _selectedRoute,
@@ -202,10 +197,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildSocialButton(),
-                          const SizedBox(height: 24),
-                          _buildDivider(),
-                          const SizedBox(height: 24),
                           Row(
                             children: [
                               Expanded(
@@ -265,7 +256,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              // --- ALTERADO PARA DROPDOWN ---
                               Expanded(
                                 child: _buildDropdownField(
                                   hintText: 'Instituição',
@@ -289,7 +279,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // --- ALTERADO PARA DROPDOWN ---
                           _buildDropdownField(
                             hintText: 'Semestre',
                             items: semesters,
@@ -386,8 +375,22 @@ class _RegistrationScreenState extends State<RegistrationScreen>
             if (isEmail && !RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
               return 'Por favor, insira um email válido';
             }
-            if (isPassword && value.length < 8) {
-              return 'A senha deve ter no mínimo 8 caracteres';
+            if (isPassword && !isConfirm) {
+              if (value.length < 8) {
+                return 'A senha deve ter no mínimo 8 caracteres';
+              }
+              if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                return 'A senha deve ter pelo menos uma letra maiúscula';
+              }
+              if (!RegExp(r'[a-z]').hasMatch(value)) {
+                return 'A senha deve ter pelo menos uma letra minúscula';
+              }
+              if (!RegExp(r'[0-9]').hasMatch(value)) {
+                return 'A senha deve ter pelo menos um número';
+              }
+              if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                return 'A senha deve ter pelo menos um caractere especial';
+              }
             }
             if (isConfirm && value != _passwordController.text) {
               return 'As senhas não coincidem';
@@ -570,47 +573,6 @@ class _RegistrationScreenState extends State<RegistrationScreen>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: Colors.white.withAlpha(77))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text('Ou então', style: _getTextStyle(alpha: 179)),
-        ),
-        Expanded(child: Divider(color: Colors.white.withAlpha(77))),
-      ],
-    );
-  }
-
-  Widget _buildSocialButton() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            side: BorderSide(color: Colors.white.withAlpha(77)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {},
-          icon: const FaIcon(
-            FontAwesomeIcons.google,
-            color: Colors.white,
-            size: 20,
-          ),
-          label: Text(
-            'Criar conta usando Google',
-            style: _getTextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
     );
   }
 

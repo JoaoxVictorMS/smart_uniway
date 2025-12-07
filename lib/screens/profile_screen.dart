@@ -1,8 +1,12 @@
 // lib/screens/profile_screen.dart
 
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/database_service.dart';
 import 'package:smart_uniway/services/theme_provider.dart';
@@ -20,6 +24,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isEditing = false;
   bool _isLoading = false;
+  
+  // Cor personalizada para modo escuro
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
 
   late TextEditingController _nameController;
   late TextEditingController _surnameController;
@@ -30,10 +37,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _periodController;
   late TextEditingController _routeController;
 
+  // Variável para armazenar o caminho da foto de perfil
+  String? _profileImagePath;
+  final ImagePicker _imagePicker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
     _initializeControllers();
+    _loadProfileImage();
   }
 
   void _initializeControllers() {
@@ -49,6 +61,189 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     _periodController = TextEditingController(text: widget.user.period);
     _routeController = TextEditingController(text: widget.user.route);
+  }
+
+  // Carrega a foto de perfil salva
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profile_image_${widget.user.id}');
+    if (imagePath != null && File(imagePath).existsSync()) {
+      setState(() {
+        _profileImagePath = imagePath;
+      });
+    }
+  }
+
+  // Salva o caminho da foto de perfil
+  Future<void> _saveProfileImagePath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_image_${widget.user.id}', path);
+  }
+
+  // Abre o seletor de imagem
+  Future<void> _pickImage() async {
+    if (!_isEditing) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                'Escolher foto de perfil',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                title: const Text(
+                  'Tirar foto',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.photo_library,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                title: const Text(
+                  'Escolher da galeria',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.gallery);
+                },
+              ),
+              if (_profileImagePath != null)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                    ),
+                  ),
+                  title: const Text(
+                    'Remover foto',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      color: Colors.red,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeImage();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Obtém a imagem da câmera ou galeria
+  Future<void> _getImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        // Salva a imagem no diretório do app
+        final directory = await getApplicationDocumentsDirectory();
+        final String fileName = 'profile_${widget.user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final String savedPath = '${directory.path}/$fileName';
+
+        // Copia o arquivo para o novo local
+        await File(pickedFile.path).copy(savedPath);
+
+        // Remove a foto antiga se existir
+        if (_profileImagePath != null && File(_profileImagePath!).existsSync()) {
+          await File(_profileImagePath!).delete();
+        }
+
+        // Salva o caminho e atualiza a UI
+        await _saveProfileImagePath(savedPath);
+        setState(() {
+          _profileImagePath = savedPath;
+        });
+
+        _showFeedbackSnackBar('Foto de perfil atualizada!');
+      }
+    } catch (e) {
+      _showFeedbackSnackBar('Erro ao selecionar imagem.', isError: true);
+    }
+  }
+
+  // Remove a foto de perfil
+  Future<void> _removeImage() async {
+    try {
+      if (_profileImagePath != null && File(_profileImagePath!).existsSync()) {
+        await File(_profileImagePath!).delete();
+      }
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('profile_image_${widget.user.id}');
+      
+      setState(() {
+        _profileImagePath = null;
+      });
+      
+      _showFeedbackSnackBar('Foto de perfil removida!');
+    } catch (e) {
+      _showFeedbackSnackBar('Erro ao remover imagem.', isError: true);
+    }
   }
 
   @override
@@ -168,23 +363,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: themeColors.primary,
-                        child: widget.user.userType == UserType.admin
-                            ? const Icon(
-                                Icons.admin_panel_settings,
-                                size: 50,
-                                color: Colors.black,
-                              )
-                            : Text(
-                                '${widget.user.name[0]}${widget.user.surname[0]}',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
+                      child: GestureDetector(
+                        onTap: _isEditing ? _pickImage : null,
+                        child: Stack(
+                          children: [
+                            // Avatar com foto ou iniciais
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
+                              backgroundImage: _profileImagePath != null
+                                  ? FileImage(File(_profileImagePath!))
+                                  : null,
+                              child: _profileImagePath == null
+                                  ? (widget.user.userType == UserType.admin
+                                      ? Icon(
+                                          Icons.admin_panel_settings,
+                                          size: 50,
+                                          color: isDark ? Colors.white : Colors.black,
+                                        )
+                                      : Text(
+                                          '${widget.user.name[0]}${widget.user.surname[0]}',
+                                          style: TextStyle(
+                                            fontSize: 40,
+                                            color: isDark ? Colors.white : Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ))
+                                  : null,
+                            ),
+                            // Ícone de câmera (só aparece no modo de edição para alunos)
+                            if (_isEditing && widget.user.userType == UserType.student)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? primaryAccentColor : themeColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: themeColors.surface,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    size: 18,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
                                 ),
                               ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -268,15 +498,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- FUNÇÃO CORRIGIDA ---
   Widget _buildThemeToggle(ThemeProvider themeProvider, ColorScheme colors) {
+    final isDark = themeProvider.themeMode == ThemeMode.dark;
+    
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        themeProvider.themeMode == ThemeMode.dark
-            ? Icons.dark_mode_outlined
-            : Icons.light_mode_outlined,
-        color: colors.primary,
+        isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+        color: isDark ? primaryAccentColor : colors.primary,
         size: 28,
       ),
       title: Text(
@@ -288,19 +517,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       subtitle: Text(
-        themeProvider.themeMode == ThemeMode.dark ? 'Ativado' : 'Desativado',
+        isDark ? 'Ativado' : 'Desativado',
         style: TextStyle(
           fontFamily: 'Poppins',
           color: colors.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: Switch(
-        value: themeProvider.themeMode == ThemeMode.dark,
+        value: isDark,
         onChanged: (bool value) {
           themeProvider.toggleTheme();
         },
-        // CORRIGIDO: Usa a cor do tema
-        activeThumbColor: colors.primary,
+        activeThumbColor: primaryAccentColor,
+        activeTrackColor: primaryAccentColor.withOpacity(0.5),
       ),
     );
   }
@@ -385,7 +614,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- FUNÇÃO CORRIGIDA ---
   Widget _buildGlassButton({
     required VoidCallback? onPressed,
     required String text,
@@ -393,6 +621,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColors = Theme.of(context).colorScheme;
+    final buttonColor = isDark ? primaryAccentColor : themeColors.primary;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -403,20 +632,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            // CORRIGIDO: Usa a cor do tema
             backgroundColor: isPrimary
-                ? themeColors.primary.withAlpha(200)
+                ? buttonColor.withAlpha(200)
                 : (isDark
                       ? Colors.white.withAlpha(26)
                       : Colors.black.withAlpha(5)),
-            foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
+            foregroundColor: isPrimary ? Colors.white : themeColors.onSurface,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              // CORRIGIDO: Usa a cor do tema
               side: BorderSide(
                 color: isPrimary
-                    ? themeColors.primary
+                    ? buttonColor
                     : (isDark
                           ? Colors.white.withAlpha(51)
                           : Colors.black.withAlpha(20)),
@@ -432,7 +659,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                 )
               : Text(
