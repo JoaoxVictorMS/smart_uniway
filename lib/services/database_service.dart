@@ -45,6 +45,7 @@ class DatabaseService {
         course $nullableTextType,
         registrationNumber $nullableTextType UNIQUE,
         institution $nullableTextType,
+        city $nullableTextType,
         route $nullableTextType,
         period $nullableTextType
       )
@@ -89,6 +90,7 @@ class DatabaseService {
       'course': 'ADS',
       'registrationNumber': 'F001',
       'institution': 'FATEC',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '3º Semestre',
     });
@@ -102,6 +104,7 @@ class DatabaseService {
       'course': 'Logística',
       'registrationNumber': 'F002',
       'institution': 'FATEC',
+      'city': 'Catanduva',
       'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
@@ -115,6 +118,7 @@ class DatabaseService {
       'course': 'Gestão',
       'registrationNumber': 'F003',
       'institution': 'FATEC',
+      'city': 'Pindorama',
       'route': 'Rota PI-1: ETEC → FATEC → UNIFIPA',
       'period': '5º Semestre',
     });
@@ -130,6 +134,7 @@ class DatabaseService {
       'course': 'Mecatrônica',
       'registrationNumber': 'I001',
       'institution': 'IFSP',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-2: IMES → IFSP → ETEC',
       'period': '2º Semestre',
     });
@@ -143,6 +148,7 @@ class DatabaseService {
       'course': 'Engenharia',
       'registrationNumber': 'I002',
       'institution': 'IFSP',
+      'city': 'Pindorama',
       'route': 'Rota PI-2: IFSP → IMES',
       'period': '7º Semestre',
     });
@@ -156,6 +162,7 @@ class DatabaseService {
       'course': 'Licenciatura',
       'registrationNumber': 'I003',
       'institution': 'IFSP',
+      'city': 'Catanduva',
       'route': 'Rota CT-2: Centro → IMES → IFSP',
       'period': '4º Semestre',
     });
@@ -171,6 +178,7 @@ class DatabaseService {
       'course': 'Química',
       'registrationNumber': 'C001',
       'institution': 'CETEC',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-3: CETEC → FATEC',
       'period': '1º Semestre',
     });
@@ -184,6 +192,7 @@ class DatabaseService {
       'course': 'Farmácia',
       'registrationNumber': 'C002',
       'institution': 'CETEC',
+      'city': 'Pindorama',
       'route': 'Rota PI-3: CETEC → UNIFIPA',
       'period': '2º Semestre',
     });
@@ -197,6 +206,7 @@ class DatabaseService {
       'course': 'Nutrição',
       'registrationNumber': 'C003',
       'institution': 'CETEC',
+      'city': 'Catanduva',
       'route': 'Rota CT-3: Centro → CETEC',
       'period': '6º Semestre',
     });
@@ -212,6 +222,7 @@ class DatabaseService {
       'course': 'Medicina',
       'registrationNumber': 'U001',
       'institution': 'UNIFIPA',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '8º Semestre',
     });
@@ -225,6 +236,7 @@ class DatabaseService {
       'course': 'Direito',
       'registrationNumber': 'U002',
       'institution': 'UNIFIPA',
+      'city': 'Catanduva',
       'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '9º Semestre',
     });
@@ -238,6 +250,7 @@ class DatabaseService {
       'course': 'Ed. Física',
       'registrationNumber': 'U003',
       'institution': 'UNIFIPA',
+      'city': 'Elisiário',
       'route': 'Rota EL-2: UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
@@ -253,6 +266,7 @@ class DatabaseService {
       'course': 'Informática',
       'registrationNumber': 'E001',
       'institution': 'ETEC',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-2: IMES → IFSP → ETEC',
       'period': '2º Semestre',
     });
@@ -266,6 +280,7 @@ class DatabaseService {
       'course': 'Administração',
       'registrationNumber': 'E002',
       'institution': 'ETEC',
+      'city': 'Catanduva',
       'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '3º Semestre',
     });
@@ -279,6 +294,7 @@ class DatabaseService {
       'course': 'Enfermagem',
       'registrationNumber': 'E003',
       'institution': 'ETEC',
+      'city': 'Elisiário',
       'route': 'Rota EL-2: UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
@@ -294,6 +310,7 @@ class DatabaseService {
       'course': 'Psicologia',
       'registrationNumber': 'M001',
       'institution': 'IMES',
+      'city': 'Novo Horizonte',
       'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '10º Semestre',
     });
@@ -307,6 +324,7 @@ class DatabaseService {
       'course': 'Pedagogia',
       'registrationNumber': 'M002',
       'institution': 'IMES',
+      'city': 'Catanduva',
       'route': 'Rota CT-2: Centro → IMES → IFSP',
       'period': '4º Semestre',
     });
@@ -320,6 +338,7 @@ class DatabaseService {
       'course': 'Ciências Contábeis',
       'registrationNumber': 'M003',
       'institution': 'IMES',
+      'city': 'Elisiário',
       'route': 'Rota EL-1: IMES → IFSP → FATEC',
       'period': '8º Semestre',
     });
