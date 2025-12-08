@@ -171,7 +171,7 @@ class DatabaseService {
       'course': 'Química',
       'registrationNumber': 'C001',
       'institution': 'CETEC',
-      'route': 'Rota 3',
+      'route': 'Rota NH-3: CETEC → FATEC',
       'period': '1º Semestre',
     });
     await db.insert('users', {
@@ -184,7 +184,7 @@ class DatabaseService {
       'course': 'Farmácia',
       'registrationNumber': 'C002',
       'institution': 'CETEC',
-      'route': 'Rota 2',
+      'route': 'Rota PI-3: CETEC → UNIFIPA',
       'period': '2º Semestre',
     });
     await db.insert('users', {
@@ -197,7 +197,7 @@ class DatabaseService {
       'course': 'Nutrição',
       'registrationNumber': 'C003',
       'institution': 'CETEC',
-      'route': 'Rota 1',
+      'route': 'Rota CT-3: Centro → CETEC',
       'period': '6º Semestre',
     });
 

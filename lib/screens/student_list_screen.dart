@@ -37,7 +37,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
   // Mapa de rotas por instituição
   final Map<String, Set<String>> routesByInstitution = {
     'IFSP': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-2: IFSP → IMES', 'Rota CT-2: Centro → IMES → IFSP', 'Rota PA-2: ETEC → IFSP', 'Rota EL-1: IMES → IFSP → FATEC'},
-    'CETEC': {'Rota 1', 'Rota 2', 'Rota 3'},
+    'CETEC': {'Rota NH-3: CETEC → FATEC', 'Rota PI-3: CETEC → UNIFIPA', 'Rota CT-3: Centro → CETEC'},
     'FATEC': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-1: IMES → IFSP → FATEC'},
     'UNIFIPA': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-2: UNIFIPA → ETEC'},
     'ETEC': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-2: ETEC → IFSP', 'Rota EL-2: UNIFIPA → ETEC'},
@@ -409,19 +409,22 @@ class _StudentListScreenState extends State<StudentListScreen> {
               _filterStudents();
             },
           ),
-          const SizedBox(width: 12),
-          _buildFilterPopupMenu(
-            hint: 'Rota',
-            icon: Icons.alt_route_outlined,
-            selectedValue: _selectedRoute,
-            items: availableRoutes,
-            onSelected: (value) {
-              setState(() {
-                _selectedRoute = value;
-              });
-              _filterStudents();
-            },
-          ),
+          // Rota só aparece se tiver instituição selecionada
+          if (_selectedInstitution != null) ...[
+            const SizedBox(width: 12),
+            _buildFilterPopupMenu(
+              hint: 'Rota',
+              icon: Icons.alt_route_outlined,
+              selectedValue: _selectedRoute,
+              items: availableRoutes,
+              onSelected: (value) {
+                setState(() {
+                  _selectedRoute = value;
+                });
+                _filterStudents();
+              },
+            ),
+          ],
           if (_selectedInstitution != null || _selectedRoute != null)
             Padding(
               padding: const EdgeInsets.only(left: 12.0),
