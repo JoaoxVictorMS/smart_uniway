@@ -4,4 +4,5 @@
     "totvsLanguageServer.welcomePage": false,
     "files.autoSave": "afterDelay",
     "dart.flutterHotReloadOnSave": "all",
+    "editor.fontFamily": "Monocraft",
 }
