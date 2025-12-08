@@ -456,7 +456,7 @@ class _ReportScreenState extends State<ReportScreen> {
             sigmaY: isDark ? 5.0 : 0.0,
           ),
           child: DropdownButtonFormField<String>(
-            value: value,
+            initialValue: value,
             style: TextStyle(
               fontFamily: 'Poppins',
               color: themeColors.onSurface,
