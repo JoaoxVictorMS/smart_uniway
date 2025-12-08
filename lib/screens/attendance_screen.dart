@@ -13,7 +13,7 @@ class AttendanceScreen extends StatefulWidget {
 }
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color darkAccentColor = Color(0xFF16213E);
   static const Color presentColor = Colors.green;
   static const Color absentColor = Colors.red;
@@ -22,7 +22,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final Map<String, AttendanceStatus> _attendanceStatus = {};
   String? _selectedInstitution;
   bool _isLoading = false;
-  // A variável _isGeneratingReport foi removida
   final String _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
   final List<String> institutions = [
     'IFSP',
@@ -95,9 +94,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // A função _handleGlobalReportButton foi REMOVIDA
-  // A função _showFeedbackSnackBar foi REMOVIDA (não é mais necessária)
-
   @override
   Widget build(BuildContext context) {
     final relevantStatuses = _attendanceStatus.values;
@@ -142,8 +138,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 _buildInstitutionSelector(),
                 const SizedBox(height: 24),
 
-                // --- BOTÕES DE RELATÓRIO REMOVIDOS ---
-
                 // Painel de resumo da chamada atual
                 if (_selectedInstitution != null)
                   _buildSummaryBar(
@@ -160,7 +154,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     child: _isLoading
                         ? Center(
                             child: CircularProgressIndicator(
-                              color: themeColors.primary,
+                              color: isDark ? primaryAccentColor : themeColors.primary,
                             ),
                           )
                         : _studentsForSelectedInstitution.isEmpty
@@ -211,7 +205,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  // --- FUNÇÕES HELPER (INALTERADAS) ---
+  // --- FUNÇÕES HELPER ---
 
   Widget _buildInstitutionSelector() {
     return _buildDropdownField(
@@ -286,6 +280,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Widget _buildAttendanceListItem(User student, AttendanceStatus status) {
     final themeColors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     Color borderColor;
     switch (status) {
       case AttendanceStatus.present:
@@ -305,11 +301,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: themeColors.primary,
+          backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
           child: Text(
             '${student.name[0]}${student.surname[0]}',
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -418,7 +414,10 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: themeColors.primary, width: 1.5),
+                borderSide: BorderSide(
+                  color: isDark ? primaryAccentColor : themeColors.primary, 
+                  width: 1.5,
+                ),
               ),
             ),
             hint: Text(
@@ -445,6 +444,4 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
   }
-
-  // A função _buildGlassButton foi REMOVIDA
 }

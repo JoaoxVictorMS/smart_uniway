@@ -12,6 +12,9 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
+  // Cor personalizada para modo escuro
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
+
   // Estado para os filtros
   final List<String> institutions = [
     'IFSP',
@@ -127,8 +130,6 @@ class _ReportScreenState extends State<ReportScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // --- CORREÇÃO AQUI ---
-        // Título genérico, pois a instituição é selecionada na tela
         title: const Text('Gerar Relatório'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -230,7 +231,7 @@ class _ReportScreenState extends State<ReportScreen> {
                                 ConnectionState.waiting) {
                               return Center(
                                 child: CircularProgressIndicator(
-                                  color: themeColors.primary,
+                                  color: isDark ? primaryAccentColor : themeColors.primary,
                                 ),
                               );
                             }
@@ -370,6 +371,8 @@ class _ReportScreenState extends State<ReportScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColors = Theme.of(context).colorScheme;
+    final buttonColor = isDark ? primaryAccentColor : themeColors.primary;
+    
     return SizedBox(
       width: double.infinity,
       child: ClipRRect(
@@ -382,17 +385,19 @@ class _ReportScreenState extends State<ReportScreen> {
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isPrimary
-                  ? themeColors.primary.withAlpha(200)
+                  ? buttonColor.withAlpha(200)
                   : (isDark
                         ? Colors.white.withAlpha(26)
                         : Colors.black.withAlpha(5)),
-              foregroundColor: isPrimary ? Colors.black : themeColors.onSurface,
+              foregroundColor: isPrimary 
+                  ? (isDark ? Colors.white : Colors.black) 
+                  : themeColors.onSurface,
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(
                   color: isPrimary
-                      ? themeColors.primary
+                      ? buttonColor
                       : (isDark
                             ? Colors.white.withAlpha(51)
                             : Colors.black.withAlpha(20)),
@@ -480,7 +485,10 @@ class _ReportScreenState extends State<ReportScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: themeColors.primary, width: 1.5),
+                borderSide: BorderSide(
+                  color: isDark ? primaryAccentColor : themeColors.primary, 
+                  width: 1.5,
+                ),
               ),
             ),
             hint: Text(

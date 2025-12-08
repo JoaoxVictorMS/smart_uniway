@@ -21,7 +21,7 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   fl_chart: ^1.1.0
   pdf: ^3.10.8
-  path_provider: ^2.1.3
+  path_provider: ^2.1.5
   open_filex: ^4.4.0
   
   # Pacote da Splash Screen (LOCAL CORRETO)
@@ -31,7 +31,9 @@ dependencies:
   provider: ^6.1.2
   
   # Pacote para salvar a preferência do tema
-  shared_preferences: ^2.2.3
+  shared_preferences: ^2.5.3
+  image_picker: ^1.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -78,3 +80,4 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/smart_uniway_logo.png"
   min_sdk_android: 21
+  

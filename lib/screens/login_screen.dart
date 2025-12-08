@@ -2,9 +2,9 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/screens/admin_home_screen.dart';
+import 'package:smart_uniway/screens/forgot_password_screen.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
 import 'package:smart_uniway/services/database_service.dart';
 import 'package:smart_uniway/screens/student_home_screen.dart';
@@ -61,7 +61,6 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  // --- FUNÇÃO CORRIGIDA ---
   Future<void> _handleLogin() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
@@ -82,9 +81,6 @@ class _LoginScreenState extends State<LoginScreen>
 
           if (!mounted) return;
 
-          // --- ALTERAÇÃO PRINCIPAL AQUI ---
-          // Agora, ambos os tipos de usuário são envolvidos pelo AuthProvider.
-
           Widget homeScreen;
           if (user.userType == UserType.admin) {
             homeScreen = const AdminHomeScreen();
@@ -97,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen>
             MaterialPageRoute(
               builder: (context) => AuthProvider(
                 user: user,
-                child: homeScreen, // Navega para a tela correta
+                child: homeScreen,
               ),
             ),
           );
@@ -120,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showFeedbackSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return; // Verificação de segurança
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
@@ -196,7 +192,14 @@ class _LoginScreenState extends State<LoginScreen>
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
                           child: Text(
                             'Esqueceu a senha?',
                             style: _getTextStyle(
@@ -212,10 +215,6 @@ class _LoginScreenState extends State<LoginScreen>
                         text: 'Entrar',
                         isPrimary: true,
                       ),
-                      const SizedBox(height: 24),
-                      _buildDivider(),
-                      const SizedBox(height: 24),
-                      _buildSocialButton(),
                       const Spacer(flex: 3),
                     ],
                   ),
@@ -305,47 +304,6 @@ class _LoginScreenState extends State<LoginScreen>
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.red, width: 1.5),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: Colors.white.withAlpha(77))),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text('OU', style: _getTextStyle(alpha: 179)),
-        ),
-        Expanded(child: Divider(color: Colors.white.withAlpha(77))),
-      ],
-    );
-  }
-
-  Widget _buildSocialButton() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            side: BorderSide(color: Colors.white.withAlpha(77)),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {},
-          icon: const FaIcon(
-            FontAwesomeIcons.google,
-            color: Colors.white,
-            size: 20,
-          ),
-          label: Text(
-            'Entrar com Google',
-            style: _getTextStyle(fontWeight: FontWeight.w600),
           ),
         ),
       ),

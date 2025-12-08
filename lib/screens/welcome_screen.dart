@@ -100,18 +100,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     builder: (context, child) {
                       return Transform.translate(
                         offset: Offset(0, _logoAnimation.value),
-                        // CORREÇÃO AQUI: Adicionamos o "null check operator" (!) para garantir
-                        // que o 'child' não é nulo neste ponto.
                         child: child!,
                       );
                     },
                     child: Image.asset(
-                      'assets/images/smart_uniway_logo.png',
-                      height: 150,
-                      color: Colors.white,
+                      'assets/images/logo_smart_uniway (2).png',
+                      height: 180,
+  
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
                   Text(
                     'Smart Uniway',
                     textAlign: TextAlign.center,
@@ -194,17 +192,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: isPrimary
-                ? const Color.fromARGB(255, 157, 132, 183).withAlpha(200)
+                ? primaryAccentColor.withAlpha(200)
                 : Colors.white.withAlpha(26),
-            foregroundColor: isPrimary
-                ? const Color.fromARGB(255, 255, 255, 255)
-                : Colors.white,
+            foregroundColor: isPrimary ? Colors.white : Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
                 color: isPrimary
-                    ? const Color.fromARGB(255, 157, 132, 183)
+                    ? primaryAccentColor
                     : Colors.white.withAlpha(51),
                 width: 1.5,
               ),

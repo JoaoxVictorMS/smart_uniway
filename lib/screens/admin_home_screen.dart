@@ -1,8 +1,10 @@
 // lib/screens/admin_home_screen.dart
 
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
 import 'package:smart_uniway/services/database_service.dart';
@@ -17,7 +19,7 @@ class AdminHomeScreen extends StatefulWidget {
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
 
   // Cores do Gráfico
   static const Color ifspColor = Color(0xFFD94E4E);
@@ -31,13 +33,37 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late Future<Map<String, int>> _chartDataFuture;
   int touchedIndex = -1;
 
-  // --- VARIÁVEL QUE FALTAVA ---
   bool _isGeneratingReport = false;
+  String? _profileImagePath;
 
   @override
   void initState() {
     super.initState();
     _chartDataFuture = DatabaseService.instance.getStudentCountByInstitution();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = AuthProvider.of(context)?.user;
+    if (user != null) {
+      _loadProfileImage(user.id!);
+    }
+  }
+
+  // Carrega a foto de perfil salva
+  Future<void> _loadProfileImage(int userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profile_image_$userId');
+    
+    setState(() {
+      if (imagePath != null && File(imagePath).existsSync()) {
+        _profileImagePath = imagePath;
+      } else {
+        // Remove a referência se o arquivo não existir ou foi removido
+        _profileImagePath = null;
+      }
+    });
   }
 
   Map<String, Color> get institutionColorMap => {
@@ -107,7 +133,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         iconTheme: IconThemeData(
           color: themeColors.onSurface,
           size: 28,
-        ), // Corrigido para tema
+        ),
       ),
       drawer: _buildAppDrawer(context, user),
       body: Stack(
@@ -252,7 +278,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
       );
     });
-    // Usa Wrap para quebrar a linha se não houver espaço
     return Wrap(
       alignment: WrapAlignment.center,
       spacing: 16.0,
@@ -289,7 +314,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     final drawerBackgroundColor = isDark
         ? backgroundColor.withAlpha(200)
-        : themeColors.surface.withAlpha(240); // Corrigido para modo claro
+        : themeColors.surface.withAlpha(240);
 
     return ClipRRect(
       borderRadius: const BorderRadius.only(
@@ -322,15 +347,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   currentAccountPicture: CircleAvatar(
-                    backgroundColor: themeColors.primary,
-                    child: Text(
-                      '${user.name[0]}${user.surname[0]}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
+                    backgroundImage: _profileImagePath != null
+                        ? FileImage(File(_profileImagePath!))
+                        : null,
+                    child: _profileImagePath == null
+                        ? Text(
+                            '${user.name[0]}${user.surname[0]}',
+                            style: TextStyle(
+                              fontSize: 24,
+                              color: isDark ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
                   ),
                   decoration: BoxDecoration(
                     color: themeColors.onSurface.withAlpha(15),
@@ -428,10 +458,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     fontFamily: 'Poppins',
                   ),
                 ),
-                onTap: () {
+                onTap: () async {
                   if (user != null) {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/profile', arguments: user);
+                    await Navigator.pushNamed(context, '/profile', arguments: user);
+                    // Recarrega a foto após voltar da tela de perfil
+                    _loadProfileImage(user.id!);
                   }
                 },
               ),

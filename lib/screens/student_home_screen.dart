@@ -1,8 +1,10 @@
 // lib/screens/student_home_screen.dart
 
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_uniway/models/user_model.dart';
 import 'package:smart_uniway/services/auth_provider.dart';
 import 'package:smart_uniway/services/database_service.dart';
@@ -16,26 +18,41 @@ class StudentHomeScreen extends StatefulWidget {
 
 class _StudentHomeScreenState extends State<StudentHomeScreen> {
   static const Color backgroundColor = Color(0xFF1A1A2E);
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color presentColor = Colors.green;
   static const Color absentColor = Colors.red;
 
   late Future<List<Map<String, dynamic>>> _historyFuture;
   User? _currentUser;
+  String? _profileImagePath;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Busca o usuário do AuthProvider e inicia o carregamento do histórico
     _currentUser = AuthProvider.of(context)?.user;
     if (_currentUser != null) {
       _historyFuture = DatabaseService.instance.getAttendanceHistoryForStudent(
         _currentUser!.id!,
       );
+      _loadProfileImage();
     } else {
-      // Fallback, embora o login deva sempre fornecer um usuário
       _historyFuture = Future.value([]);
     }
+  }
+
+  // Carrega a foto de perfil salva
+  Future<void> _loadProfileImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final imagePath = prefs.getString('profile_image_${_currentUser!.id}');
+    
+    setState(() {
+      if (imagePath != null && File(imagePath).existsSync()) {
+        _profileImagePath = imagePath;
+      } else {
+        // Remove a referência se o arquivo não existir ou foi removido
+        _profileImagePath = null;
+      }
+    });
   }
 
   @override
@@ -204,14 +221,19 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     ),
                     currentAccountPicture: CircleAvatar(
                       backgroundColor: primaryAccentColor,
-                      child: Text(
-                        '${user.name[0]}${user.surname[0]}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      backgroundImage: _profileImagePath != null
+                          ? FileImage(File(_profileImagePath!))
+                          : null,
+                      child: _profileImagePath == null
+                          ? Text(
+                              '${user.name[0]}${user.surname[0]}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(15),
@@ -229,10 +251,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                       fontFamily: 'Poppins',
                     ),
                   ),
-                  onTap: () {
+                  onTap: () async {
                     if (user != null) {
-                      Navigator.pop(context); // Fecha o menu
-                      Navigator.pushNamed(context, '/profile', arguments: user);
+                      Navigator.pop(context);
+                      await Navigator.pushNamed(context, '/profile', arguments: user);
+                      // Recarrega a foto após voltar da tela de perfil
+                      _loadProfileImage();
                     }
                   },
                 ),
