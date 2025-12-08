@@ -23,6 +23,7 @@ dependencies:
   pdf: ^3.10.8
   path_provider: ^2.1.5
   open_filex: ^4.4.0
+  share_plus: ^7.2.2
   
   # Pacote da Splash Screen (LOCAL CORRETO)
   flutter_native_splash: ^2.4.0
@@ -80,4 +81,3 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/smart_uniway_logo.png"
   min_sdk_android: 21
-  
