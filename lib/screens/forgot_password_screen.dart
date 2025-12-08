@@ -36,6 +36,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   // Código de verificação
   String _generatedCode = '';
   String _userName = '';
+  String _oldPassword = ''; // Senha antiga para comparação
 
   // EmailJS credentials
   static const String _serviceId = 'service_rr0f6ga';
@@ -141,9 +142,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         return;
       }
 
-      // Busca o nome do usuário
+      // Busca o nome do usuário e senha antiga
       final user = await DatabaseService.instance.getUserByEmail(email);
       _userName = user?.name ?? 'Usuário';
+      _oldPassword = user?.password ?? ''; // Salva a senha antiga
 
       // Gera o código
       _generatedCode = _generateVerificationCode();
@@ -186,11 +188,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   Future<void> _handleUpdatePassword() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final newPassword = _passwordController.text;
+
+    // Verifica se a nova senha é igual à antiga
+    if (newPassword == _oldPassword) {
+      _showFeedbackSnackBar('A nova senha não pode ser igual à senha anterior.', isError: true);
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final email = _emailController.text.trim();
-      final newPassword = _passwordController.text;
 
       await DatabaseService.instance.updateUserPassword(email, newPassword);
 

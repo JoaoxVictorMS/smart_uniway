@@ -13,7 +13,7 @@ class StudentListScreen extends StatefulWidget {
 }
 
 class _StudentListScreenState extends State<StudentListScreen> {
-  static const Color primaryAccentColor = Color(0xFFE9B44C);
+  static const Color primaryAccentColor = Color.fromARGB(255, 157, 132, 183);
   static const Color darkAccentColor = Color(0xFF16213E);
   static const Color absentColor = Colors.red;
 
@@ -25,7 +25,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
   String? _selectedInstitution;
   String? _selectedRoute;
 
-  // --- NOVA LISTA DE OPÇÕES ---
   final Set<String> institutions = {
     'IFSP',
     'CETEC',
@@ -34,6 +33,25 @@ class _StudentListScreenState extends State<StudentListScreen> {
     'ETEC',
     'IMES',
   };
+
+  // Mapa de rotas por instituição
+  final Map<String, Set<String>> routesByInstitution = {
+    'IFSP': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-2: IFSP → IMES', 'Rota CT-2: Centro → IMES → IFSP', 'Rota PA-2: ETEC → IFSP', 'Rota EL-1: IMES → IFSP → FATEC'},
+    'CETEC': {'Rota 1', 'Rota 2', 'Rota 3'},
+    'FATEC': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-1: IMES → IFSP → FATEC'},
+    'UNIFIPA': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-2: UNIFIPA → ETEC'},
+    'ETEC': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-2: ETEC → IFSP', 'Rota EL-2: UNIFIPA → ETEC'},
+    'IMES': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-2: IFSP → IMES', 'Rota CT-2: Centro → IMES → IFSP', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-1: IMES → IFSP → FATEC'},
+  };
+
+  // Retorna as rotas disponíveis para a instituição selecionada
+  Set<String> get availableRoutes {
+    if (_selectedInstitution == null) {
+      // Se nenhuma instituição selecionada, mostra todas as rotas
+      return {'Rota 1', 'Rota 2', 'Rota 3'};
+    }
+    return routesByInstitution[_selectedInstitution] ?? {'Rota 1', 'Rota 2', 'Rota 3'};
+  }
 
   @override
   void initState() {
@@ -164,6 +182,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeColors = Theme.of(context).colorScheme;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lista de Alunos'),
@@ -203,7 +223,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Center(
                           child: CircularProgressIndicator(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: isDark ? primaryAccentColor : themeColors.primary,
                           ),
                         );
                       }
@@ -331,11 +351,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: themeColors.primary,
+                backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
                 child: Text(
                   '${student.name[0]}${student.surname[0]}',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -383,6 +403,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
             onSelected: (value) {
               setState(() {
                 _selectedInstitution = value;
+                // Limpa a rota quando muda a instituição
+                _selectedRoute = null;
               });
               _filterStudents();
             },
@@ -392,7 +414,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             hint: 'Rota',
             icon: Icons.alt_route_outlined,
             selectedValue: _selectedRoute,
-            items: {'Rota 1', 'Rota 2', 'Rota 3'},
+            items: availableRoutes,
             onSelected: (value) {
               setState(() {
                 _selectedRoute = value;
@@ -475,6 +497,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
   }) {
     final themeColors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? primaryAccentColor : themeColors.primary;
+    
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -486,14 +510,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: isActive
-                ? themeColors.primary.withAlpha(200)
+                ? activeColor.withAlpha(200)
                 : (isDark
                       ? Colors.white.withAlpha(26)
                       : Colors.black.withAlpha(10)),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isActive
-                  ? themeColors.primary
+                  ? activeColor
                   : (isDark
                         ? Colors.white.withAlpha(51)
                         : Colors.black.withAlpha(20)),
@@ -503,14 +527,18 @@ class _StudentListScreenState extends State<StudentListScreen> {
             children: [
               Icon(
                 icon,
-                color: isActive ? Colors.black : themeColors.onSurface,
+                color: isActive 
+                    ? (isDark ? Colors.white : Colors.black) 
+                    : themeColors.onSurface,
                 size: 18,
               ),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive ? Colors.black : themeColors.onSurface,
+                  color: isActive 
+                      ? (isDark ? Colors.white : Colors.black) 
+                      : themeColors.onSurface,
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
                 ),
@@ -571,7 +599,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: themeColors.primary, width: 1.5),
+              borderSide: BorderSide(
+                color: isDark ? primaryAccentColor : themeColors.primary, 
+                width: 1.5,
+              ),
             ),
           ),
         ),

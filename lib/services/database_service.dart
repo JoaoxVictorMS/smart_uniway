@@ -89,7 +89,7 @@ class DatabaseService {
       'course': 'ADS',
       'registrationNumber': 'F001',
       'institution': 'FATEC',
-      'route': '1',
+      'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '3º Semestre',
     });
     await db.insert('users', {
@@ -102,7 +102,7 @@ class DatabaseService {
       'course': 'Logística',
       'registrationNumber': 'F002',
       'institution': 'FATEC',
-      'route': '2',
+      'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
     await db.insert('users', {
@@ -115,7 +115,7 @@ class DatabaseService {
       'course': 'Gestão',
       'registrationNumber': 'F003',
       'institution': 'FATEC',
-      'route': '1',
+      'route': 'Rota PI-1: ETEC → FATEC → UNIFIPA',
       'period': '5º Semestre',
     });
 
@@ -130,7 +130,7 @@ class DatabaseService {
       'course': 'Mecatrônica',
       'registrationNumber': 'I001',
       'institution': 'IFSP',
-      'route': '2',
+      'route': 'Rota NH-2: IMES → IFSP → ETEC',
       'period': '2º Semestre',
     });
     await db.insert('users', {
@@ -143,7 +143,7 @@ class DatabaseService {
       'course': 'Engenharia',
       'registrationNumber': 'I002',
       'institution': 'IFSP',
-      'route': '3',
+      'route': 'Rota PI-2: IFSP → IMES',
       'period': '7º Semestre',
     });
     await db.insert('users', {
@@ -156,7 +156,7 @@ class DatabaseService {
       'course': 'Licenciatura',
       'registrationNumber': 'I003',
       'institution': 'IFSP',
-      'route': '1',
+      'route': 'Rota CT-2: Centro → IMES → IFSP',
       'period': '4º Semestre',
     });
 
@@ -171,7 +171,7 @@ class DatabaseService {
       'course': 'Química',
       'registrationNumber': 'C001',
       'institution': 'CETEC',
-      'route': '3',
+      'route': 'Rota 3',
       'period': '1º Semestre',
     });
     await db.insert('users', {
@@ -184,7 +184,7 @@ class DatabaseService {
       'course': 'Farmácia',
       'registrationNumber': 'C002',
       'institution': 'CETEC',
-      'route': '2',
+      'route': 'Rota 2',
       'period': '2º Semestre',
     });
     await db.insert('users', {
@@ -197,7 +197,7 @@ class DatabaseService {
       'course': 'Nutrição',
       'registrationNumber': 'C003',
       'institution': 'CETEC',
-      'route': '1',
+      'route': 'Rota 1',
       'period': '6º Semestre',
     });
 
@@ -212,7 +212,7 @@ class DatabaseService {
       'course': 'Medicina',
       'registrationNumber': 'U001',
       'institution': 'UNIFIPA',
-      'route': '1',
+      'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '8º Semestre',
     });
     await db.insert('users', {
@@ -225,7 +225,7 @@ class DatabaseService {
       'course': 'Direito',
       'registrationNumber': 'U002',
       'institution': 'UNIFIPA',
-      'route': '2',
+      'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '9º Semestre',
     });
     await db.insert('users', {
@@ -238,7 +238,7 @@ class DatabaseService {
       'course': 'Ed. Física',
       'registrationNumber': 'U003',
       'institution': 'UNIFIPA',
-      'route': '3',
+      'route': 'Rota EL-2: UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
 
@@ -253,7 +253,7 @@ class DatabaseService {
       'course': 'Informática',
       'registrationNumber': 'E001',
       'institution': 'ETEC',
-      'route': '1',
+      'route': 'Rota NH-2: IMES → IFSP → ETEC',
       'period': '2º Semestre',
     });
     await db.insert('users', {
@@ -266,7 +266,7 @@ class DatabaseService {
       'course': 'Administração',
       'registrationNumber': 'E002',
       'institution': 'ETEC',
-      'route': '2',
+      'route': 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
       'period': '3º Semestre',
     });
     await db.insert('users', {
@@ -279,7 +279,7 @@ class DatabaseService {
       'course': 'Enfermagem',
       'registrationNumber': 'E003',
       'institution': 'ETEC',
-      'route': '3',
+      'route': 'Rota EL-2: UNIFIPA → ETEC',
       'period': '1º Semestre',
     });
 
@@ -294,7 +294,7 @@ class DatabaseService {
       'course': 'Psicologia',
       'registrationNumber': 'M001',
       'institution': 'IMES',
-      'route': '1',
+      'route': 'Rota NH-1: IMES → FATEC → UNIFIPA',
       'period': '10º Semestre',
     });
     await db.insert('users', {
@@ -307,7 +307,7 @@ class DatabaseService {
       'course': 'Pedagogia',
       'registrationNumber': 'M002',
       'institution': 'IMES',
-      'route': '2',
+      'route': 'Rota CT-2: Centro → IMES → IFSP',
       'period': '4º Semestre',
     });
     await db.insert('users', {
@@ -320,7 +320,7 @@ class DatabaseService {
       'course': 'Ciências Contábeis',
       'registrationNumber': 'M003',
       'institution': 'IMES',
-      'route': '3',
+      'route': 'Rota EL-1: IMES → IFSP → FATEC',
       'period': '8º Semestre',
     });
   }
