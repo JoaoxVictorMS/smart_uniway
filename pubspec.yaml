@@ -33,6 +33,7 @@ dependencies:
   # Pacote para salvar a preferência do tema
   shared_preferences: ^2.5.3
   image_picker: ^1.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -79,3 +80,4 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/smart_uniway_logo.png"
   min_sdk_android: 21
+  

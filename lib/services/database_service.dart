@@ -367,6 +367,21 @@ class DatabaseService {
     return result.isNotEmpty;
   }
 
+  // Busca usuário pelo email
+  Future<User?> getUserByEmail(String email) async {
+    final db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    return null;
+  }
+
   // Atualiza a senha do usuário pelo email
   Future<void> updateUserPassword(String email, String newPassword) async {
     final db = await instance.database;

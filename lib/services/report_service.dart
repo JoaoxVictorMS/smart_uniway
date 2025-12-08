@@ -1,159 +1,199 @@
-// lib/services/report_service.dart
-
 import 'dart:io';
-import 'package:open_filex/open_filex.dart';
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:intl/intl.dart';
 
 class ReportService {
-  // --- FUNÇÃO ANTIGA (Relatório de Instituição Única) ---
+  /// Gera um PDF com o relatório de presença por instituição
   static Future<void> generateAttendancePdf(
     String institution,
     Map<String, Map<String, int>> reportData,
   ) async {
     final pdf = pw.Document();
-    final today = DateFormat('dd/MM/yyyy').format(DateTime.now());
-    final headers = ['Data', 'Presentes', 'Ausentes', 'Total'];
-    final List<List<String>> data = [];
 
-    // Ordena as datas antes de adicionar
+    // Ordena as datas
     final sortedDates = reportData.keys.toList()..sort();
-    for (var date in sortedDates) {
-      final status = reportData[date]!;
-      final formattedDate = DateFormat(
-        'dd/MM/yyyy',
-      ).format(DateTime.parse(date));
-      final present = status['present'] ?? 0;
-      final absent = status['absent'] ?? 0;
-      final total = present + absent;
-      data.add([
-        formattedDate,
-        present.toString(),
-        absent.toString(),
-        total.toString(),
-      ]);
+
+    // Calcula totais
+    int totalPresent = 0;
+    int totalAbsent = 0;
+    for (var dateData in reportData.values) {
+      totalPresent += dateData['present'] ?? 0;
+      totalAbsent += dateData['absent'] ?? 0;
     }
+    final totalRecords = totalPresent + totalAbsent;
+    final presenceRate = totalRecords > 0 
+        ? (totalPresent / totalRecords * 100).toStringAsFixed(1) 
+        : '0.0';
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildPdfHeader(today),
-              pw.SizedBox(height: 20),
-              pw.Text(
-                'Instituição: $institution',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 20),
-              _buildPdfTable(headers, data),
-            ],
-          );
-        },
+        margin: const pw.EdgeInsets.all(32),
+        header: (context) => _buildHeader(institution),
+        footer: (context) => _buildFooter(context),
+        build: (context) => [
+          pw.SizedBox(height: 20),
+          _buildSummarySection(totalPresent, totalAbsent, presenceRate),
+          pw.SizedBox(height: 20),
+          _buildDataTable(sortedDates, reportData),
+        ],
       ),
     );
-    await _saveAndOpenFile(pdf, 'relatorio_$institution.pdf');
+
+    // Salva o arquivo
+    await _saveAndOpenPdf(pdf, institution);
   }
 
-  // --- NOVA FUNÇÃO ADICIONADA (RELATÓRIO GLOBAL) ---
-  static Future<void> generateGlobalAttendancePdf(
-    Map<String, Map<String, Map<String, int>>> globalData,
-  ) async {
-    final pdf = pw.Document();
-    final today = DateFormat('dd/MM/yyyy').format(DateTime.now());
-    final headers = ['Data', 'Presentes', 'Ausentes', 'Total'];
+  static pw.Widget _buildHeader(String institution) {
+    final now = DateTime.now();
+    final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(now);
 
-    // Ordena as instituições por nome
-    final sortedInstitutions = globalData.keys.toList()..sort();
-
-    for (var institution in sortedInstitutions) {
-      final reportData = globalData[institution]!;
-      final List<List<String>> data = [];
-
-      // Ordena as datas para a tabela
-      final sortedDates = reportData.keys.toList()..sort();
-      for (var date in sortedDates) {
-        final status = reportData[date]!;
-        final formattedDate = DateFormat(
-          'dd/MM/yyyy',
-        ).format(DateTime.parse(date));
-        final present = status['present'] ?? 0;
-        final absent = status['absent'] ?? 0;
-        final total = present + absent;
-        data.add([
-          formattedDate,
-          present.toString(),
-          absent.toString(),
-          total.toString(),
-        ]);
-      }
-
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (pw.Context context) {
-            return pw.Column(
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _buildPdfHeader(today),
-                pw.SizedBox(height: 20),
+                pw.Text(
+                  'Smart UniWay',
+                  style: pw.TextStyle(
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex('#9D84B7'),
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Relatório de Presença',
+                  style: const pw.TextStyle(
+                    fontSize: 14,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
                 pw.Text(
                   'Instituição: $institution',
                   style: pw.TextStyle(
-                    fontSize: 18,
+                    fontSize: 12,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                pw.SizedBox(height: 20),
-                _buildPdfTable(headers, data),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Gerado em: $formattedDate',
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.grey600,
+                  ),
+                ),
               ],
-            );
-          },
+            ),
+          ],
         ),
-      );
-    }
-    await _saveAndOpenFile(pdf, 'relatorio_global.pdf');
-  }
-
-  // --- HELPERS DE PDF (PARA EVITAR REPETIÇÃO) ---
-  static pw.Widget _buildPdfHeader(String today) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Text(
-          'Relatório de Presença - Smart Uniway',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-        ),
-        pw.Text('Gerado em: $today'),
+        pw.SizedBox(height: 8),
+        pw.Divider(color: PdfColor.fromHex('#9D84B7'), thickness: 2),
       ],
     );
   }
 
-  static pw.Widget _buildPdfTable(
-    List<String> headers,
-    List<List<String>> data,
+  static pw.Widget _buildFooter(pw.Context context) {
+    return pw.Column(
+      children: [
+        pw.Divider(color: PdfColors.grey400),
+        pw.SizedBox(height: 8),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'Smart UniWay - Sistema de Transporte Universitário',
+              style: const pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey600,
+              ),
+            ),
+            pw.Text(
+              'Página ${context.pageNumber} de ${context.pagesCount}',
+              style: const pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey600,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildSummarySection(
+    int totalPresent,
+    int totalAbsent,
+    String presenceRate,
   ) {
-    if (data.isEmpty) {
-      return pw.Text(
-        'Nenhum dado de presença registrado para esta instituição no período.',
-      );
-    }
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#F5F5F5'),
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+        children: [
+          _buildSummaryItem('Total Presenças', '$totalPresent', PdfColors.green),
+          _buildSummaryItem('Total Faltas', '$totalAbsent', PdfColors.red),
+          _buildSummaryItem('Taxa de Presença', '$presenceRate%', PdfColor.fromHex('#9D84B7')),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildSummaryItem(String label, String value, PdfColor color) {
+    return pw.Column(
+      children: [
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 24,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          label,
+          style: const pw.TextStyle(
+            fontSize: 12,
+            color: PdfColors.grey700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildDataTable(
+    List<String> sortedDates,
+    Map<String, Map<String, int>> reportData,
+  ) {
     return pw.TableHelper.fromTextArray(
-      headers: headers,
-      data: data,
-      border: pw.TableBorder.all(),
+      context: null,
       headerStyle: pw.TextStyle(
         fontWeight: pw.FontWeight.bold,
         color: PdfColors.white,
       ),
-      headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey),
+      headerDecoration: pw.BoxDecoration(
+        color: PdfColor.fromHex('#9D84B7'),
+      ),
+      headerHeight: 35,
       cellHeight: 30,
       cellAlignments: {
         0: pw.Alignment.centerLeft,
@@ -161,13 +201,39 @@ class ReportService {
         2: pw.Alignment.center,
         3: pw.Alignment.center,
       },
+      headers: ['Data', 'Presenças', 'Faltas', 'Total'],
+      data: sortedDates.map((dateString) {
+        final date = DateTime.parse(dateString);
+        final formattedDate = DateFormat('dd/MM/yyyy (EEE)', 'pt_BR').format(date);
+        final present = reportData[dateString]?['present'] ?? 0;
+        final absent = reportData[dateString]?['absent'] ?? 0;
+        final total = present + absent;
+
+        return [
+          formattedDate,
+          present.toString(),
+          absent.toString(),
+          total.toString(),
+        ];
+      }).toList(),
     );
   }
 
-  static Future<void> _saveAndOpenFile(pw.Document pdf, String filename) async {
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/$filename");
-    await file.writeAsBytes(await pdf.save());
-    await OpenFilex.open(file.path);
+  static Future<void> _saveAndOpenPdf(pw.Document pdf, String institution) async {
+    try {
+      final output = await getTemporaryDirectory();
+      final fileName = 'relatorio_${institution.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${output.path}/$fileName');
+      
+      await file.writeAsBytes(await pdf.save());
+      
+      debugPrint('📄 PDF salvo em: ${file.path}');
+      
+      // Abre o PDF
+      await OpenFile.open(file.path);
+    } catch (e) {
+      debugPrint('❌ Erro ao salvar/abrir PDF: $e');
+      rethrow;
+    }
   }
 }
