@@ -59,18 +59,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat(reverse: true);
-    _animationBlob1 = Tween<Offset>(
-      begin: const Offset(-0.2, -0.8),
-      end: const Offset(0.2, 0.8),
-    ).animate(
-      CurvedAnimation(parent: _auroraController, curve: Curves.easeInOut),
-    );
+    _animationBlob1 =
+        Tween<Offset>(
+          begin: const Offset(-0.2, -0.8),
+          end: const Offset(0.2, 0.8),
+        ).animate(
+          CurvedAnimation(parent: _auroraController, curve: Curves.easeInOut),
+        );
     _animationBlob2 = Tween<Offset>(
       begin: const Offset(1.2, 0.3),
       end: const Offset(-1.2, -0.3),
-    ).animate(
-      CurvedAnimation(parent: _auroraController, curve: Curves.linear),
-    );
+    ).animate(CurvedAnimation(parent: _auroraController, curve: Curves.linear));
   }
 
   @override
@@ -90,12 +89,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   // Envia email via EmailJS
-  Future<bool> _sendVerificationEmail(String toEmail, String toName, String code) async {
+  Future<bool> _sendVerificationEmail(
+    String toEmail,
+    String toName,
+    String code,
+  ) async {
     try {
       debugPrint('📧 Enviando email para: $toEmail');
       debugPrint('📧 Nome: $toName');
       debugPrint('📧 Código: $code');
-      
+
       final response = await http.post(
         Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
         headers: {
@@ -132,10 +135,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
     try {
       final email = _emailController.text.trim();
-      
+
       // Verifica se o email existe no banco
       final userExists = await DatabaseService.instance.checkUserExists(email);
-      
+
       if (!userExists) {
         _showFeedbackSnackBar('Email não encontrado.', isError: true);
         setState(() => _isLoading = false);
@@ -151,7 +154,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       _generatedCode = _generateVerificationCode();
 
       // Envia o email
-      final emailSent = await _sendVerificationEmail(email, _userName, _generatedCode);
+      final emailSent = await _sendVerificationEmail(
+        email,
+        _userName,
+        _generatedCode,
+      );
 
       if (emailSent) {
         _showFeedbackSnackBar('Código enviado para $email');
@@ -159,7 +166,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           _currentStep = 1;
         });
       } else {
-        _showFeedbackSnackBar('Erro ao enviar email. Tente novamente.', isError: true);
+        _showFeedbackSnackBar(
+          'Erro ao enviar email. Tente novamente.',
+          isError: true,
+        );
       }
     } catch (e) {
       _showFeedbackSnackBar('Erro inesperado. Tente novamente.', isError: true);
@@ -192,7 +202,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
     // Verifica se a nova senha é igual à antiga
     if (newPassword == _oldPassword) {
-      _showFeedbackSnackBar('A nova senha não pode ser igual à senha anterior.', isError: true);
+      _showFeedbackSnackBar(
+        'A nova senha não pode ser igual à senha anterior.',
+        isError: true,
+      );
       return;
     }
 
@@ -223,12 +236,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     _generatedCode = _generateVerificationCode();
     final email = _emailController.text.trim();
 
-    final emailSent = await _sendVerificationEmail(email, _userName, _generatedCode);
+    final emailSent = await _sendVerificationEmail(
+      email,
+      _userName,
+      _generatedCode,
+    );
 
     if (emailSent) {
       _showFeedbackSnackBar('Novo código enviado!');
     } else {
-      _showFeedbackSnackBar('Erro ao reenviar. Tente novamente.', isError: true);
+      _showFeedbackSnackBar(
+        'Erro ao reenviar. Tente novamente.',
+        isError: true,
+      );
     }
 
     setState(() => _isLoading = false);
@@ -290,7 +310,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           // Conteúdo
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32.0,
+                vertical: 24.0,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -396,11 +419,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         icon = Icons.email_outlined;
     }
 
-    return Icon(
-      icon,
-      size: 80,
-      color: primaryAccentColor,
-    );
+    return Icon(icon, size: 80, color: primaryAccentColor);
   }
 
   Widget _buildTitle() {
@@ -430,10 +449,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     String subtitle;
     switch (_currentStep) {
       case 0:
-        subtitle = 'Enviaremos um código de verificação para o seu email cadastrado.';
+        subtitle =
+            'Enviaremos um código de verificação para o seu email cadastrado.';
         break;
       case 1:
-        subtitle = 'Digite o código de 6 dígitos enviado para ${_emailController.text}';
+        subtitle =
+            'Digite o código de 6 dígitos enviado para ${_emailController.text}';
         break;
       case 2:
         subtitle = 'Crie uma nova senha segura para sua conta.';
@@ -631,7 +652,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         child: TextFormField(
           controller: controller,
           obscureText: isPassword
-              ? (isConfirmPassword ? !_isConfirmPasswordVisible : !_isPasswordVisible)
+              ? (isConfirmPassword
+                    ? !_isConfirmPasswordVisible
+                    : !_isPasswordVisible)
               : false,
           keyboardType: keyboardType,
           maxLength: maxLength,
@@ -647,7 +670,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
-                      (isConfirmPassword ? _isConfirmPasswordVisible : _isPasswordVisible)
+                      (isConfirmPassword
+                              ? _isConfirmPasswordVisible
+                              : _isPasswordVisible)
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: Colors.white.withAlpha(179),
@@ -655,7 +680,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                     onPressed: () {
                       setState(() {
                         if (isConfirmPassword) {
-                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          _isConfirmPasswordVisible =
+                              !_isConfirmPasswordVisible;
                         } else {
                           _isPasswordVisible = !_isPasswordVisible;
                         }
@@ -673,7 +699,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: primaryAccentColor, width: 1.5),
+              borderSide: const BorderSide(
+                color: primaryAccentColor,
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -708,7 +737,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                color: isPrimary ? primaryAccentColor : Colors.white.withAlpha(51),
+                color: isPrimary
+                    ? primaryAccentColor
+                    : Colors.white.withAlpha(51),
                 width: 1.5,
               ),
             ),
@@ -719,7 +750,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               ? const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 )
               : Text(
                   text,

@@ -36,12 +36,47 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   // Mapa de rotas por instituição
   final Map<String, Set<String>> routesByInstitution = {
-    'IFSP': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-2: IFSP → IMES', 'Rota CT-2: Centro → IMES → IFSP', 'Rota PA-2: ETEC → IFSP', 'Rota EL-1: IMES → IFSP → FATEC'},
-    'CETEC': {'Rota NH-3: CETEC → FATEC', 'Rota PI-3: CETEC → UNIFIPA', 'Rota CT-3: Centro → CETEC'},
-    'FATEC': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-1: IMES → IFSP → FATEC'},
-    'UNIFIPA': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-2: UNIFIPA → ETEC'},
-    'ETEC': {'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-1: ETEC → FATEC → UNIFIPA', 'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC', 'Rota PA-2: ETEC → IFSP', 'Rota EL-2: UNIFIPA → ETEC'},
-    'IMES': {'Rota NH-1: IMES → FATEC → UNIFIPA', 'Rota NH-2: IMES → IFSP → ETEC', 'Rota PI-2: IFSP → IMES', 'Rota CT-2: Centro → IMES → IFSP', 'Rota PA-1: UNIFIPA → FATEC → IMES', 'Rota EL-1: IMES → IFSP → FATEC'},
+    'IFSP': {
+      'Rota NH-2: IMES → IFSP → ETEC',
+      'Rota PI-2: IFSP → IMES',
+      'Rota CT-2: Centro → IMES → IFSP',
+      'Rota PA-2: ETEC → IFSP',
+      'Rota EL-1: IMES → IFSP → FATEC',
+    },
+    'CETEC': {
+      'Rota NH-3: CETEC → FATEC',
+      'Rota PI-3: CETEC → UNIFIPA',
+      'Rota CT-3: Centro → CETEC',
+    },
+    'FATEC': {
+      'Rota NH-1: IMES → FATEC → UNIFIPA',
+      'Rota PI-1: ETEC → FATEC → UNIFIPA',
+      'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
+      'Rota PA-1: UNIFIPA → FATEC → IMES',
+      'Rota EL-1: IMES → IFSP → FATEC',
+    },
+    'UNIFIPA': {
+      'Rota NH-1: IMES → FATEC → UNIFIPA',
+      'Rota PI-1: ETEC → FATEC → UNIFIPA',
+      'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
+      'Rota PA-1: UNIFIPA → FATEC → IMES',
+      'Rota EL-2: UNIFIPA → ETEC',
+    },
+    'ETEC': {
+      'Rota NH-2: IMES → IFSP → ETEC',
+      'Rota PI-1: ETEC → FATEC → UNIFIPA',
+      'Rota CT-1: Centro → FATEC → UNIFIPA → ETEC',
+      'Rota PA-2: ETEC → IFSP',
+      'Rota EL-2: UNIFIPA → ETEC',
+    },
+    'IMES': {
+      'Rota NH-1: IMES → FATEC → UNIFIPA',
+      'Rota NH-2: IMES → IFSP → ETEC',
+      'Rota PI-2: IFSP → IMES',
+      'Rota CT-2: Centro → IMES → IFSP',
+      'Rota PA-1: UNIFIPA → FATEC → IMES',
+      'Rota EL-1: IMES → IFSP → FATEC',
+    },
   };
 
   // Retorna as rotas disponíveis para a instituição selecionada
@@ -50,7 +85,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
       // Se nenhuma instituição selecionada, mostra todas as rotas
       return {'Rota 1', 'Rota 2', 'Rota 3'};
     }
-    return routesByInstitution[_selectedInstitution] ?? {'Rota 1', 'Rota 2', 'Rota 3'};
+    return routesByInstitution[_selectedInstitution] ??
+        {'Rota 1', 'Rota 2', 'Rota 3'};
   }
 
   @override
@@ -183,7 +219,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeColors = Theme.of(context).colorScheme;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lista de Alunos'),
@@ -223,7 +259,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Center(
                           child: CircularProgressIndicator(
-                            color: isDark ? primaryAccentColor : themeColors.primary,
+                            color: isDark
+                                ? primaryAccentColor
+                                : themeColors.primary,
                           ),
                         );
                       }
@@ -351,7 +389,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: isDark ? primaryAccentColor : themeColors.primary,
+                backgroundColor: isDark
+                    ? primaryAccentColor
+                    : themeColors.primary,
                 child: Text(
                   '${student.name[0]}${student.surname[0]}',
                   style: TextStyle(
@@ -501,7 +541,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final themeColors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeColor = isDark ? primaryAccentColor : themeColors.primary;
-    
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -530,8 +570,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
             children: [
               Icon(
                 icon,
-                color: isActive 
-                    ? (isDark ? Colors.white : Colors.black) 
+                color: isActive
+                    ? (isDark ? Colors.white : Colors.black)
                     : themeColors.onSurface,
                 size: 18,
               ),
@@ -539,8 +579,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive 
-                      ? (isDark ? Colors.white : Colors.black) 
+                  color: isActive
+                      ? (isDark ? Colors.white : Colors.black)
                       : themeColors.onSurface,
                   fontFamily: 'Poppins',
                   fontWeight: FontWeight.w600,
@@ -603,7 +643,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: isDark ? primaryAccentColor : themeColors.primary, 
+                color: isDark ? primaryAccentColor : themeColors.primary,
                 width: 1.5,
               ),
             ),
