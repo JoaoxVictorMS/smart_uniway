@@ -41,10 +41,8 @@ class SmartUniwayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ouve o provider
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    // Define os temas
     final darkTheme = ThemeData(
       useMaterial3: true,
       fontFamily: 'Poppins',
@@ -95,26 +93,21 @@ class SmartUniwayApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart Uniway',
       debugShowCheckedModeBanner: false,
-
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: themeProvider.themeMode,
-
       home: const WelcomeScreen(),
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/login':
             return MaterialPageRoute(builder: (_) => const LoginScreen());
           case '/registration':
-            return MaterialPageRoute(
-              builder: (_) => const RegistrationScreen(),
-            );
+            return MaterialPageRoute(builder: (_) => const RegistrationScreen());
           case '/student_home':
             if (settings.arguments is User) {
               final user = settings.arguments as User;
               return MaterialPageRoute(
-                builder: (_) =>
-                    AuthProvider(user: user, child: const StudentHomeScreen()),
+                builder: (_) => AuthProvider(user: user, child: const StudentHomeScreen()),
               );
             }
             return MaterialPageRoute(builder: (_) => const LoginScreen());
@@ -122,8 +115,7 @@ class SmartUniwayApp extends StatelessWidget {
             if (settings.arguments is User) {
               final user = settings.arguments as User;
               return MaterialPageRoute(
-                builder: (_) =>
-                    AuthProvider(user: user, child: const AdminHomeScreen()),
+                builder: (_) => AuthProvider(user: user, child: const AdminHomeScreen()),
               );
             }
             return MaterialPageRoute(builder: (_) => const LoginScreen());
@@ -132,13 +124,11 @@ class SmartUniwayApp extends StatelessWidget {
           case '/attendance':
             return MaterialPageRoute(builder: (_) => const AttendanceScreen());
           case '/report':
-            return MaterialPageRoute(builder: (_) => const ReportScreen());
+            return MaterialPageRoute(builder: (_) => ReportScreen());
           case '/profile':
             if (settings.arguments is User) {
               final user = settings.arguments as User;
-              return MaterialPageRoute(
-                builder: (_) => ProfileScreen(user: user),
-              );
+              return MaterialPageRoute(builder: (_) => ProfileScreen(user: user));
             }
             break;
         }
