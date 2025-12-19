@@ -641,7 +641,7 @@ class ReportService {
         debugPrint('📄 Abrindo compartilhamento...');
         await Share.shareXFiles([
           XFile(file.path),
-        ], text: 'Relatório Smart UniWay');
+        ], text: 'Relatório Smart Uniway');
       }
     } catch (e, stackTrace) {
       debugPrint('❌ Erro ao salvar/abrir PDF: $e');
